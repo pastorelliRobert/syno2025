@@ -898,8 +898,10 @@ showNotification("Patientez quelques secondes, le graphe complet est volumineux 
       try {
 			<!-- LES DONNÉES xxxxx.JSON SONT DANS LE MEME DOSSIER QUE INDEX.HTML  -- ------->
 			<!-- datafinal.json  output2DES.json   outputDES_catgram.json         -- ------->
-			const response = await fetch('https://drive.google.com/file/d/1VQDB4uhDbsuBTlzMsEe4-otXlIQS0F79/view?usp=sharing');
-			const data = await response.json();
+			const response = await fetch('https://drive.google.com/file/d/1VQDB4uhDbsuBTlzMsEe4-otXlIQS0F79/view?usp=drive_link');
+			 
+	      
+	      const data = await response.json();
 
 			// Vérifier que les données contiennent les propriétés nodes et edges
 			if (data && data.nodes && data.edges) {
