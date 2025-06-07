@@ -1049,7 +1049,6 @@ function rescaleGraphLayout(graphData, scale = 0.8) {
     node.y = ((node.y - centerY) / maxRange) * scale;
   });
 }
-rescaleGraphLayout(graphData, 0.8);
 
 function applyRandomLayout(graphData, range = 1) {
   graphData.nodes.forEach(node => {
