@@ -1,0 +1,3861 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visualisation de Graphe avec Sigma.js</title>
+
+ <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+ <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+	
+  
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sigma.js/1.2.1/sigma.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sigma.js/1.2.1/plugins/sigma.layout.forceAtlas2.min.js"></script>
+
+ <script src="./bundle.js"></script>
+ 
+ <script>
+window.addEventListener("load", function () {
+    console.log("📌 Vérification après chargement complet des scripts...");
+
+    console.log("📌 Vérification de sigma :", window.sigma);
+    console.log("📌 Vérification de forceatlas2 :", window.forceAtlas2);
+    console.log("📌 Vérification de graphology :", window.graphology);
+    console.log("📌 Vérification de pandemonium :", window.pandemonium);
+    console.log("📌 Vérification de graphology-indices :", window.graphologyIndices);
+    console.log("📌 Vérification de graphology-communities-louvain :", window.graphologyCommunitiesLouvain);
+});
+</script>
+ 
+  <link rel="icon" href="data:,">
+ 
+<!-- STYLE----------------------------------------------------------------------------------------------------- -->
+ <style>
+ 
+.container {
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;  /* ✅ Toutes les colonnes prennent la même hauteur */
+    height:83vh;  /* ✅ Utilise toute la hauteur de l'écran */
+}
+
+/* ✅ Colonne de gauche */
+#left-panel {
+    width: 250px;
+    padding: 1px;
+    border-right: 1px solid #ccc;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+/* ✅ Colonne de droite */
+#right-panel {
+    width: 250px;
+    padding: 1px;
+    border-left: 1px solid #ccc;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+/* ✅ Zone du graphe - Ajuste la hauteur automatiquement */
+#graph-container {
+    flex-grow: 1;
+	  max-height:100%;  /*✅ Permet au graphe de prendre la même hauteur que les colonnes */
+    border: 1px solid #ccc;
+    background: #f9f9f9;
+    display: flex;
+    align-items: stretch;  /* ✅ Ajuste le graphe à la hauteur de son parent */
+	position: relative; /* ✅ Cette ligne est essentielle pour que les enfants absolus s’alignent par rapport à lui */
+    overflow: hidden;    /* ✅ Pour éviter les débordements */
+	width: 100%;
+	height: 100%;
+}
+
+/* ✅ Style du conteneur de recherche */
+#search-container {
+    padding: 5px;
+    border: 2px solid #ddd;
+    background: #f9f9f9;
+    margin-bottom: 4px;
+    border-radius: 2px;
+	position: relative
+}
+
+/* ✅ Style de la zone de saisie et du bouton */
+#node-search {
+    width: 90%;
+	font-size: 12px;
+    padding: 6px;
+    margin-bottom: 5px;
+    border: 2px solid #ccc;
+    border-radius: 4px;
+}
+
+#search-node-btn {
+    width: 80%;
+    padding: 6px;
+    font-size: 14px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+#search-node-btn:hover {
+    background-color: #2980b9;
+}
+
+#search-initial-btn  {
+    width: 90%;
+    padding: 6px;
+    font-size: 10px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+#search-initial-btn:hover {
+    background-color: #2980b9;
+}
+
+/* ✅ Liste des résultats de recherche */
+#search-results {
+    list-style-type: none;
+    padding: 0;
+    margin: 5px 0;
+    max-height: 100px;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    background: white;
+    border-radius: 4px;
+}
+
+#search-results li {
+    padding: 8px;
+    cursor: pointer;
+    transition: background 0.3s;
+    border-bottom: 1px solid #ddd;
+}
+
+#search-results li:hover {
+    background: #f1f1f1;
+}
+
+#info-text {
+    flex-grow: 1;
+    overflow-y: auto;
+    max-height: 110px;
+    max-width: 230px;
+    word-wrap: break-word;
+    padding: 10px;
+    border: 1px solid #ccc; /* ✅ Bordure pour démarquer */
+    background: #f9f9f9; /* ✅ Fond clair */
+    border-radius: 4px; /* ✅ Arrondi des coins */
+	margin-bottom: 5px;  /* ✅ Ajoute de l'espace sous cette zone */
+}
+
+#info-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;  /* ✅ Espacement entre les boutons */
+	margin-bottom: 6px; 
+    padding-top: 10px; /* ✅ Ajoute de l’espace au-dessus des boutons */
+}
+
+button {
+    width: 90%;  
+    padding: 10px;
+    font-size: 12px;
+    background-color: #3498db; 
+    color: white;
+    border: none;
+    border-radius: 4px; 
+    cursor: pointer;
+    transition: background 0.3s ease;
+	margin-bottom: 10px;  /* Augmente l'espacement sous chaque bouton */
+}
+
+/* Effet au survol */
+button:hover {
+    background-color: #2980b9;
+}
+
+#show-neighbors-btn {
+    width: 80%;
+    padding: 5px;
+    font-size: 12px;
+    background-color:  #ff9933  ; /* ✅ synonymes brun clair */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+#show-neighbors-btn:hover {
+    background-color: #d35400;
+}
+
+#show-neighbors-btn:disabled {
+    background-color: #bdc3c7; /* ✅ Gris quand désactivé */
+    cursor: not-allowed;
+}
+
+#show-cliques-btn {
+    width: 80%;
+    padding: 5px;
+    font-size: 12px;
+    background-color:  #ff9933  ;  
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+#show-cliques-btn:hover {
+    background-color: #d35400;
+}
+
+#show-cliques-btn:disabled {
+    background-color: #bdc3c7; /* ✅ Gris quand désactivé */
+    cursor: not-allowed;
+}
+
+#show-syno2-btn {
+    width: 80%;
+    padding: 8px;
+    font-size: 12px;
+    background-color: #ff9933 ; /* ✅ syno2*/
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+#show-syno2-btn:hover {
+    background-color:  #d35400;
+}
+
+#show-syno2-btn:disabled {
+    background-color: #bdc3c7; /* ✅ Gris quand désactivé */
+    cursor: not-allowed;
+}
+
+#show-adjacency-btn {
+    width: 80%;
+    padding: 8px;
+    font-size: 12px;
+    background-color: #ff9933; /* ✅  bouton adjacence */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+	margin-bottom: 1px;
+}
+
+#show-adjacency-btn:hover {
+    background-color: #d35400;
+}
+
+#show-adjacency-btn:disabled {
+    background-color: #bdc3c7; /* ✅ Gris quand désactivé */
+    cursor: not-allowed;
+}
+
+#graph-management {
+    padding: 10px;
+    border: 4px solid #2980b9;  /* ✅ Bordure épaisse bleue */
+    border-radius: 8px;  /* ✅ Coins arrondis */
+    background: #f9f9f9;  /* ✅ Fond clair */
+    text-align: center;
+    margin-top: 1px;
+}
+
+#graph-management h3 {
+    margin-top: 0;
+    font-size: 12px;
+    color: #2980b9;
+}
+#community-legend {    /* COMMUNAUTES */
+    width: auto;
+    max-width: 115px; /* ✅ Réduit la largeur du cadre pour 1 colonne */
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; /* ✅ Meilleur alignement à gauche */
+    padding: 5px;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    position:  relative;
+    top: 1px;
+	left : 1px ;
+    z-index: 10;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+/* ✅ Conteneur des pastilles avec 2 colonnes */
+#community-items {  
+	display: flex;
+    flex-wrap: wrap;
+    max-height: 500px;
+    overflow-y: auto;
+    gap: 5px;
+   justify-content: space-between;
+}
+
+/* ✅ Éléments de la légende (adaptés pour 2 colonnes) */
+.legend-item {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 5px;
+    transition: all 0.3s ease-in-out;
+    width: calc(50% - 10px); /* ✅ Deux colonnes maximum */
+    min-width: 90px;
+}
+
+/* ✅ Pastille de couleur */
+.color-dot {
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 8px;
+    transition: transform 0.2s ease-in-out;
+}
+
+/* ✅ Effet zoom au survol */
+.legend-item:hover .color-dot {
+    transform: scale(1.2);
+}
+
+/* ✅ Labels des communautés */
+.legend-label {
+    font-size: 14px;
+    font-weight: bold;
+}
+
+/* ✅ Style du bouton "Toutes Communautés" */
+.show-all-button {
+    margin-top: 10px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.3s ease-in-out;
+}
+
+.show-all-button:hover {
+    background-color: #2980b9;
+}
+
+#hide-legend-zone {
+    width: 80%;
+    text-align: center;
+    padding: 5px;
+    background: #a3a3c2;
+    color: white;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+#hide-legend-zone:hover {
+    background: #c0392b;
+}
+
+#show-legend-btn {
+    padding: 5px;
+    background: #2ecc71;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 10px;
+    display: none;
+}
+
+#hide-legend-btn {
+    width: 100%;
+    margin-top: 10px;
+    padding: 5px;
+    background-color: #bdc3c7;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+#hide-legend-btn:hover {
+    background-color:  #a3a3c2;
+}
+
+#connected-components-legend {  /* CONNEXES */
+    width: auto;
+    max-width:180px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 5px;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    position: relative;        
+    top: 1px;              /* ✅ décalage depuis le haut de la page */
+    left: 1px;
+    z-index: 10 ;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+	/*  hauteur fixe + scroll */
+    max-height: 500px;
+    overflow-y: auto;
+	 overflow-x: hidden;
+	
+}
+
+#connected-components-legend .legend-item {
+    width: 100% !important;
+    min-width: 100px !important;
+    box-sizing: border-box;
+}
+
+/* ✅ Conteneur   */
+#legend-items {
+	display: flex;
+    flex-wrap: wrap;
+    max-height: 500px;
+    overflow-y: auto;
+    gap: 5px;
+    justify-content: space-between;
+}
+
+/* ✅ Chaque pastille prend la moitié de la ligne = 2 colonnes */
+.legend-item {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 5px;
+    transition: all 0.3s ease-in-out;
+    width: calc(50% - 10px); 
+    min-width: 90px;
+    box-sizing: border-box; /* ✅ Pour une meilleure cohérence d’affichage */
+}
+
+/* ✅ Pastilles */
+.color-dot {
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 8px;
+    border: 1px solid #000;
+    transition: transform 0.2s ease-in-out;
+}
+
+/* ✅ Zoom au survol */
+.legend-item:hover .color-dot {
+    transform: scale(1.2);
+}
+
+.legend-label {
+    font-size: 14px;
+    font-weight: bold;
+}
+
+/* ✅ Style du bouton "Toutes Composantes" */
+.show-all-button {
+    margin-top: 10px;
+    background-color: #3498db; /* ✅ Bleu Sigma.js */
+    color: white;
+    border: none;
+    padding: 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.3s ease-in-out;
+}
+
+.show-all-button:hover {
+    background-color: #2980b9; /* ✅ Bleu foncé au survol */
+}
+
+/* ✅ Bouton "TOUTES Communautés" */
+.show-all-button {
+    margin-top: 10px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.3s ease-in-out;
+    width: 100%;
+}
+
+.show-all-button:hover {
+    background-color: #2980b9;
+}
+
+/* ✅ Bouton "Masquer" */
+.hide-legend-button {
+    margin-top: 5px;
+    background-color: #bdc3c7;
+    color: white;
+    border: none;
+    padding: 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.3s ease-in-out;
+    width: 100%;
+	 display: block; /* ✅ Assurer qu'il est bien affiché */
+}
+
+.hide-legend-button:hover {
+    background-color: #e74c3c; /* ✅ Rouge au survol */
+}
+
+#graph-stats-display {
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    background-color: rgba(255, 255, 255, 0.85);
+    padding: 4px 8px;
+    font-size: 12px;
+    border-radius: 4px;
+    font-weight: bold;
+    z-index: 10;
+    border: 1px solid #ccc;
+}
+
+#graph-titre-display {
+    position: absolute;
+    top: 1px;
+    left: 200px;
+    background-color: rgba(255, 255, 255, 0.85);
+    padding: 4px 8px;
+    font-size: 12px;
+    border-radius: 4px;
+    font-weight: bold;
+    z-index: 10;
+    border: 1px solid #ccc;
+}
+
+ /* ✅ Style pour la notification */
+.graph-notification {
+    position: absolute;
+    top: 25px;
+    left: 400px;
+    background-color: #33cc33;
+    color: #336600;
+    border: 2px solid #ccc;
+    padding: 8px 12px;
+    border-radius: 5px;
+    box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
+    font-size: 14px;
+    z-index: 9999;
+    display: none;
+    max-width: 500px;
+}
+
+#btn-mode-chemin {
+  background-color: #ce7e00;
+  color: white;
+  border: none;
+  padding: 6px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.3s ease-in-out;
+  margin-top: 10px;
+}
+
+#btn-mode-chemin.active {
+  background-color: #1bcc53;
+  font-size: 12px;
+}
+
+.clique-symbol {
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    line-height: 15px;
+    text-align: center;
+    background-color: green;
+    color: white;
+    border-radius: 50%;
+    cursor: pointer;
+    margin-right: 5px;
+    font-size: 12px;
+}
+
+#clique-popup {
+    position: fixed;
+    top: 20px;      /* ✅ marge par rapport au haut de la page */
+    left: 20px;     /* ✅ marge par rapport au bord gauche */
+    width: 300px;   /* ✅ largeur fixe */
+    max-height: 400px;  /* ✅ hauteur max avec scroll si dépasse */
+    overflow-y: auto;
+    background: white;
+    border: 1px solid black;
+    padding: 10px;
+    z-index: 9999;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    border-radius: 5px;
+}
+
+  </style>
+  <!-- FIN STYLE----------------------------------------------------------------------------------------------------- -->
+
+
+</head>
+<body>
+
+ <h1>Graphes de synonymes</h1>
+
+<!-- DIV----------------------------------------------------------------------------------------------------- -->
+
+  <div class="container">
+  
+  <!-- ✅ COLONNE DE GAUCHE (INFOS & RECHERCHE PAR MOT) -->
+	<div id="left-panel"> 
+		
+		<div id="graph-management">
+				
+			<div id="info-text"></div>			
+			<div id="search-container">
+			<input type="text" id="node-search" placeholder="Rechercher un mot..." />
+			<button id="search-node-btn" title="Taper au clavier, dans la zone de saisie ci-dessus, des caractères contenus dans le mot recherché, cliquer sur le bouton et sélectionner dans la liste déroulante ci-dessous le mot recherché.">Rechercher dans le graphe en cours</button>
+			<ul id="search-results"></ul>
+			</div>	
+			
+		<h3>Approche individuelle</h3>	
+			<!-- ✅ boutons pour afficher les graphes de la vedette -->
+			<button id="show-neighbors-btn" title="Synonymes du mot sélectionné, dans le graphe en cours (complet ou filtré)." disabled>Synonymes 1</button>
+			<button id="show-adjacency-btn" title="Relations de synonymie entre les synonymes du mot sélectionné, dans le graphe en cours (complet ou filtré)." disabled>Adjacence</button>	
+			<div id="info-buttons"></div>
+			<button id="show-syno2-btn" title="Synonymes de rang 1 (bleus) et 2 (oranges) du mot sélectionné, dans le graphe en cours (complet ou filtré)." disabled>Synonymes 1 et 2</button>
+			<button id="show-cliques-btn" title="Cliques du mot sélectionné (sous-ensembles maximums de synonymes tous synonymes les uns des autres), dans le graphe complet. " disabled>Cliques</button>
+			
+			<button id="btn-mode-chemin"title="Indique le chemin de synonymie le plus court, dans le graphe complet, entre 2 mots sélectionnés." >Chemin entre deux mots</button>			 
+
+		<h3>Approche par graphe</h3>
+		<!-- ✅ bouton Histogramme, complétude, extension, export des 2 matrices -->	
+			<button id="show-histo-btn"title="Histogramme du graphe affiché : nombre de liens/nombre de mots."style=" background-color: #b35900;">Histogramme</button>
+			<button id="extension-btn" title="Ajout, aux mot affichés, des synonymes existants dans le graphe en cours. Affichage sans les liens de synonymie qui peuvent être tracés en cliquant ensuite sur le bouton Complétude." style=" background-color: #b35900;" >Extension</button>
+			<button id="completude-btn" title="Ajout, aux mots affichés, de toutes les relations de synonymie existantes dans le graphe en cours." style=" background-color: #b35900;" >Complétude</button>
+			
+			<button id="show-connected-components-btn" title="Affiche les composantes connexes du graphe affiché (sous ensembles disjoints de mots).">Connexes</button>
+			<button id="detect-communities" title="Affiche les sous groupes de mots fortement interconnectés (algorithme de Louvain) du graphe affiché.">Communautés</button>
+			<button id="show-legend-btn" style="display:none;">Afficher la légende</button>
+		
+		</div>
+		
+	</div>
+	
+<!-- ✅ ZONE D'AFFICHAGE DU GRAPHE -->	
+	
+	<div id="graph-container">
+			
+		<div id="graph-title-banner" style="
+		position: absolute;
+		text-align: left;
+		font-weight: bold;
+		font-size: 12px;
+		margin-bottom: 10px;
+		margin-left: 500px;     /* ✅ marge par rapport au bord gauche */
+		margin-width:200px;   /* ✅ largeur fixe */
+		height: 10px; 
+		width: 320px; 	
+		padding: 6px;
+		background-color: #f0f0f0;
+		border-bottom: 2px solid #ccc; 
+		z-index: 100;">
+		...
+		</div>
+	
+	<!-- ✅ stat points, liens placée en haut à gauche du conteneur -->
+		<div id="graph-stats-display">0 mot, 0 lien</div>
+		
+	<!-- ✅ titre du graphe, à droite des stat -->
+		<div id="graph-titre-display">...</div>			
+		<!-- ✅ Notification placée en haut à droite du conteneur -->
+		<div id="notification" class="graph-notification">Notification...</div>
+	 
+	</div>
+		<!-- Légende des communautés  -->
+		<div id="community-legend"style="display: none;" >
+		<h3>Communautés</h3>
+		<button id="hide-legend-btn">Masquer</button> <!-- 📌 Bouton pour cacher -->
+		<div id="legend-items"></div> <!-- 📌 Contiendra les pastilles -->
+		</div>
+		<!-- Légende des composantes connexes  -->
+		<div id="connected-components-legend" style="display: none;">
+		<h3>Composantes connexes</h3>
+		<div id="legend-items"></div>  <!--  Contiendra les pastilles -->
+		</div>
+	
+<!-- ✅ COLONNE DE DROITE (GESTION DES GRAPHES) -->
+    <div id="right-panel">
+
+		<div id="graph-management">
+			<h3>Gestion des graphes</h3>
+				
+			<button id="store-graph-en-0" title="Enregistre le graphe affiché (supprime l'enregistrement précédent)." style=" background-color: #6666ff;">STOCKER</button>
+			<button id="show-stored-graph0" title="Affiche le graphe stocké." style=" background-color: #6666ff;" >AFFICHER</button>
+			<button id="store-graph-en-1" title="Enregistre le graphe affiché (ne supprime pas l'enregistrement précédent)."style=" background-color: #0066ff;" >Ajouter au CUMUL</button>
+			<button id="subtract-graph-en-1" title="Retire le graphe affiché du CUMUL " style=" background-color: #0066ff;" >Soustraire du CUMUL</button>
+			<button id="show-stored-graph1"style=" background-color:#0066ff;" >Afficher le CUMUL</button>
+			<button id="reset-stored-graph-1"style=" background-color: #0066ff;" >Vider le CUMUL</button>
+			
+			<h3>Import/Export</h3>
+			<button id="import-graph" title="Importe un fichier, au format JSON compatible, à partir de votre ordinateur."  style=" background-color: #cc99ff;" >Importer un graphe</button>
+			<input type="file" id="import-file" accept=".json" style="display: none;" />
+			<button id="btn-importer-mots" title="Importe et affiche les mots d'un fichier, au format CSV sur votre ordinateur, contenant une liste de mots séparés par une virgule." style=" background-color: #cc99ff;" >Importer des mots</button>
+			<input type="file" id="file-mots-import" accept=".csv" style="display: none;">
+			
+			<button id="export-graph" title="Exporte le fichier correspondant au graphe affiché, au format JSON, dans votre dossier Téléchargement." style=" background-color: #66ccff;" >Exporter le graphe</button>
+			<button onclick="exportGraphToPDF()" title="Exporte le graphe tel qu'affiché au format PDF dans votre dossier de Téléchargement." style=" background-color: #66ccff;">Exporter le graphe en PDF</button>
+			<button id="export-label"  title="Copie la liste des mots du graphe affiché dans un fichier CSV de votre dossier Téléchargement." style=" background-color: #66ccff;" >Exporter les mots</button>	
+			<button id="export-matrix-btn" title="Création, pour le graphe affiché, d'un tableau dont les cases (i,j) indiquent si les mots i et j sont synonymes dans le dictionnaire de synonymie complet. Si les mots i et j sont synonymes, la case (i,j) contient 1, même s’ils ne sont pas reliés dans le graphe affiché. S’ils ne sont pas synonymes, la case contient 0."  style=" background-color: #6fa8dc;" >Exporter matrice de synonymie</button>
+			<button id="export-path-btn" title="Création, pour le graphe affiché, d'un tableau dont les cases (i,j) contiennent la distance entre les mots i et j (nombre minimum de liens pour aller d’un mot à un autre dans le dictionnaire complet). Si deux mots sont synonymes leur distance est 1 ; s’ils sont reliés par un chemin de synonymie comportant 2, 3, n mots intermédiaires, la distance est 2, 3, n. S’il n’existe aucun lien entre eux dans le dictionnaire, la case contient -1. ATTENTION le calcul de cette matrice EST TRÈS LONG notamment si les mots sont éloignés en terme de synonymie (de quelques minutes pour moins de 10 mots à plusieurs dizaines de minutes au delà, des heures si plus de 1000 mots) !"  style=" background-color: #6fa8dc;" >Exporter matrice des distances</button>
+			<button id="stop-matrix-btn" title="Interrompt le calcul de la matrice des distances après la prochaine étape du calcul en cours" style="display:none; ">🛑 Annuler le calcul de la matrice des distances</button>
+
+
+						
+		</div>	
+		 		
+	</div>	 
+	
+<!-- ✅ BOUTONS EN DESSUS DU GRAPHE   -->	
+
+<!-- ✅ bouton aide -->	
+	<button id="help-btn"
+        style="position: fixed; top: 10px; right: 650px;left:270px; width: 60px;
+               z-index: 1000; padding: 10px 16px;
+               background-color: #66ccff; color: white;
+               border: none; border-radius: 6px;
+               box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+               cursor: pointer;"
+	>Aide</button>
+	
+<!-- ✅ contenu aide -->	
+	<div id="help-modal"
+     style="display: none; position: fixed; top: 15%; left:22%; width: 50%;
+            background: white; border: 1px solid #ccc; padding: 20px;fontSize = "40px";
+            box-shadow: 0 0 10px rgba(0,0,0,0.1); z-index: 2000;">
+	<h2>Cet écran vous permet de visualiser, d'explorer et d'analyser</h2>
+	<h2>les relations de synonymie entre des mots français, à l'aide de graphes.</h2>
+	<p>Les mots (50352) et les relations de synonymie (212084) sont issus du <strong>DÉS (Dictionnaire Électronique des Synonymes)</strong></p>
+	<p>mis à disposition sur Internet par le laboratoire <a href="https://crisco4.unicaen.fr/des/" target="_blank">CRISCO</a> de l’Université de Caen.</p>
+	<p>Les <a href="https://fr.wikipedia.org/wiki/Th%C3%A9orie_des_graphes" target="_blank">graphes</a> sont des modèles simples de réseaux d'objets (ici les mots) reliés entre eux par une relation (ici la synonymie).</p>
+	<p> - </p>
+	<p>Le <strong>Graphe complet</strong> comprend tous les mots du dictionnaire.</p>
+	<p>Le bouton <strong>Filtrer</strong> crée un <strong>Graphe filtré</strong> avec les mots extraits selon les critères du filtrage.</p>
+	<p>Au départ le graphe complet est le <strong>graphe en cours</strong>, ensuite le dernier graphe filtré est le <strong>graphe en cours</strong>.</p>
+	<p>Les traitements associés aux boutons se font sur le <strong>graphe en cours</strong> sauf pour "Cliques" qui utilise le graphe complet.</p>
+	<p><strong>Survoler les boutons pour en avoir une courte explication.</strong> </p>
+	<p>Commencer par <strong>rechercher un mot dans le graphe en cours</strong>, ce mot sera sélectionné (vedette) et s'affichera en rouge en haut de la colone de gauche.</p>
+	<p> - </p>
+	<p>Avec la souris, vous pouvez : </p>
+	<p><strong>Survoler</strong> les points (mots) du graphe pour afficher le nombre et la liste de leurs synonymes.</p>
+	<p><strong>Cliquer gauche</strong> sur un mot pour afficher toutes ses informations dans le dictionnaire et le sélectionner.</p>
+	<p><strong>Cliquer droit</strong> sur un mot pour afficher ses liens dans le graphe affiché.</p>
+	<p><strong>Clic gauche maintenu sur le fond du graphe</strong> pour déplacer tout le graphe.</p>
+	<p>Utiliser le <strong>zoom</strong> (molette de la souris) pour modifier la taille de l'affichage (visibilité des mots).</p>
+				 
+	<button onclick="document.getElementById('help-modal').style.display='none'" 
+	style="margin-top: 10px;width: 200px;"
+	>Fermer</button>   
+</div>	
+<!-- ✅ bouton graphe complet -->	
+	<button id="graphe-complet" 
+	title="Fait, du graphe complet du dictionnaire, le graphe en cours mais ne l'affiche pas car trop volumineux."
+	style=" position: fixed; top: 10px; right:750px; left:370px; width: 120px;
+               z-index: 1000; padding: 10px 16px;
+               background-color: #70db70; color: white;
+               border: none; border-radius: 6px;
+               box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+               cursor: pointer;"
+	>Graphe complet</button>
+
+<!-- ✅ bouton Filtrer -->	
+	<button id="filtre-btn"
+	title="Filtre le graphe en cours (graphe complet ou dernier graphe filtré)"
+	style=" position: fixed; top: 10px; right:450px; left:500px; width: 85px;
+               z-index: 1000; padding: 10px 16px;
+               background-color: #167019; color: white;
+               border: none; border-radius: 6px;
+               box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+               cursor: pointer;"
+	>Filtrer</button>
+	<div id="filter-panel" style="display: none; position: fixed; top: 90px; left: 450px; z-index: 1000;
+            background: #f0f0f0; padding: 12px; border: 1px solid #ccc; border-radius: 6px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15); width: 250px;">
+	<div style="text-align: right;">
+	<button id="filter-help-btn" title="Aide sur le filtrage" style="font-size: 14px; padding: 2px 6px; cursor: pointer;">
+    Aide</button>
+	</div>				
+	<strong>Ayant au moins une de ces catégories grammaticales :</strong><br>
+	<div id="catgram-filters" style="margin-bottom: 10px;">
+    <label><input type="checkbox" value="adj."> adj.</label><br>
+    <label><input type="checkbox" value="verbe"> verbe</label><br>
+    <label><input type="checkbox" value="subst."> subst.</label><br>
+    <label><input type="checkbox" value="adv."> adv.</label><br>
+    <label><input type="checkbox" value="part."> part.</label><br>
+    <label><input type="checkbox" value="loc."> loc.</label><br>
+    <label><input type="checkbox" value="prép."> prép.</label><br>
+    <label><input type="checkbox" value="interj."> interj.</label><br>
+	<label><input type="checkbox" value="autres"> Autres</label>
+	</div>
+	<label><strong>ET nombre minimal de synonymes :</strong></label><br>
+	<input type="number" id="min-syno" value="1" min="1" max="250" style="width: 120px; height: 36px; font-size: 16px;"><br><br>
+	
+	<label><strong>ET nombre maximal de synonymes :</strong></label><br>
+	<input type="number" id="max-syno" value="250" min="1" max="250" style="width: 120px; height: 36px; font-size: 16px;"><br><br>
+
+	<button id="apply-filter-btn">Appliquer</button>
+	<button id="close-filter-panel">Fermer</button>
+</div>
+
+<!-- ✅ bouton graphe filtré -->	
+	<button id="graphe-filtre" 
+	title="Affiche le dernier graphe filtré."
+	style=" position: fixed; top: 10px; right:300px; left:595px; width: 120px;
+               z-index: 1000; padding: 10px 16px;
+               background-color: #70db70; color: white;
+               border: none; border-radius: 6px;
+               box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+               cursor: pointer;"
+	>Graphe filtré</button>	
+	
+<!-- ✅ bouton  forceatlas2  -->	
+	<button id="toggle-forceatlas2" style="position: fixed; top: 10px; right: 200px;left:780px; width: 150px;
+               z-index: 1000; padding: 10px 16px;
+               background-color: #167019; color: white;
+               border: none; border-radius: 6px;
+               box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+               cursor: pointer;"  title="Optimisation de la disposition spatiale du graphe affiché" >Arrêter-démarrer la spatialisation</button>
+	
+<!-- ✅ bouton Rafraîchir l'affichage  -->		
+	<button id="refresh-graph-btn" 
+	title="Corrige les défauts de l'affichage"
+	style="position: fixed; top: 10px; right: 200px;left:970px; width: 150px;
+               z-index: 1000; padding: 10px 16px;
+               background-color: #66ccff; color: white;
+               border: none; border-radius: 6px;
+               box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+               cursor: pointer;"
+	>Rafraîchir l'affichage</button>
+	
+	<!-- ✅ Champ et bouton Recentrer sur le mot -->
+<input type="text" id="mot-recentrage"
+       placeholder="Mot du graphe"
+       style="position: fixed; top: 10px; left: 1130px; width: 150px;
+              z-index: 1000; padding: 8px;
+              border: 1px solid #ccc; border-radius: 6px;
+              box-shadow: 0 2px 6px rgba(0,0,0,0.1);"
+>
+
+<button id="recentrer-btn"
+        title="Mise en évidence du mot saisi"
+        style="position: fixed; top: 10px; left: 1290px; width: 50px;
+               z-index: 1000; padding: 10px 10px;
+               background-color: #66ccff; color: white;
+               border: none; border-radius: 6px;
+               box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+               cursor: pointer;">
+    🔍
+</button>
+
+
+	
+<!-- ✅ info bulle au survol de noeud -->		
+	<div id="node-tooltip"
+	style="position: absolute;background: rgba(0, 0, 0, 0.8);color: white;
+	padding: 5px;border-radius: 5px;display: none;font-size: 14px;	z-index: 1000;">				
+    </div>
+
+</div>
+
+	
+
+<!-- FIN DES DIV----------------------------------------------------------------------------------------------------- -->
+ 
+ 
+<!-- scrip js----------------------------------------------------------------------------------------------------- -->
+ <script>
+ 
+//////////////DECLARATION GLOBALE pour une utilisation partout////////////////////////////// 
+
+	let storedGraphComplet = null; //variable de stockage permanent du graphe complet : fichier json
+	let storedGraphEncours = null; //variable de stockage du graphe en cours, initalisé avec le graphe complet puis le graphe filtré
+	let storedGraphfiltre = null; //variable de stockage du graphe filtré  
+	let encours = "complet" ; //flag pour le graphe en cours
+	let complet = "complet";
+	let filtre = "filtre" ;
+	
+	let typeDeGraphe = "standard";  //  Par défaut
+	let	isAdjacency = null ;  // graphe d adjacence
+	let storedGraphLouvain = null; //variable de stockage du graphe Louvain
+	
+	let isForceAtlas2Running = false;
+	let storedGraph0 = { nodes: [], edges: [] }; //variable de stockage du graphe  
+	let storedGraph1 = { nodes: [], edges: [] };  // ✅ Initialise un graphe vide
+	let baseGraphForComponents = null;  // ✅ Stocke le graphe de référence pour la détection des connexes
+	
+	let isFirstComponentDetection = true;  // ✅ Vérifie si c'est le premier calcul des connexes
+	let s; // Déclarez `s` dans la portée globale pour qu'elle soit accessible dans toutes les fonctions
+	let vedette = null; //stocke l'ID du noeud sélectionné
+	let communityColors = {};
+	let lastGraphDisplayed = null;
+	let lastDisplayOptions = {};
+	let forceAtlasTimeout = null;
+	let lastGraphOptions = {};
+	let stopMatriceCalcul = false;
+	let calculInProgress = false;
+
+
+//////////////FIN DECLARATION GLOBALE ////////////////////////////// 
+
+showNotification("Patientez quelques secondes, le graphe complet est volumineux !",2000);
+
+// Affiche l'aide automatiquement à chaque chargement
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('help-modal').style.display = 'block';
+});
+
+setTimeout(() => {
+		showNotification("Commencez par <strong><strong>Rechercher un mot dans le graphe en cours </strong> </strong> et utiliser ensuite les boutons affichés sur l'écran. ", 10000);
+	},1000 );
+	
+
+//////////<!-- CHARGER LES DONNÉES INITIALES a partir de DATA.JSON -->//////
+ async function loadGraph() {
+      try {
+			<!-- LES DONNÉES xxxxx.JSON SONT DANS LE MEME DOSSIER QUE INDEX.HTML  -- ------->
+			<!-- datafinal.json  output2DES.json   outputDES_catgram.json         -- ------->
+			const response = await fetch('outputDES_catgram.json');
+			const data = await response.json();
+
+			// Vérifier que les données contiennent les propriétés nodes et edges
+			if (data && data.nodes && data.edges) {
+				console.log('✅Les données chargées contiennent bien les propriétés nodes et edges.');
+			
+				// CHARGEMENT PERMANENT DU GRAPHE JSON DANS STOREDGRAPHCOMPLET	
+				storedGraphComplet = storeGraph(data);
+				console.log('✅Les données chargées sont copiées dans le graphe complet');
+				
+				// CHARGEMENT DU GRAPHE JSON DANS storedGraphEncours= GRAPHE EN COURS	
+				storedGraphEncours = storeGraph(data);
+				const nbNodes = storedGraphEncours.nodes.length;
+				const nbEdges = storedGraphEncours.edges.length/2;
+				encours = complet;  // flag pour marquer qui est encours
+				console.log("✅Les données chargées sont copiées dans le graphe en cours", data);
+				
+				//INITIALISATION DU GRAPHE DANS S.GRAPH SANS AFFICHAGE
+				//  Création du graphe
+				// Initialiser Sigma vide	
+				s = new sigma({
+					graph:{
+					nodes: [],
+					edges: []
+					},
+					container: 'graph-container',
+					settings: {
+					drawEdges: false // rien ne s’affiche visuellement au début
+					}
+				});
+				//chargement du json dans s.graph sans affichage (sans utiliser displaygraph)
+				storedGraphEncours.nodes.forEach(node => s.graph.addNode(node));
+				storedGraphEncours.edges.forEach(edge => s.graph.addEdge(edge));
+				
+				updateGraphStats(s.graph);
+				setGraphBanner(`Graphe complet en cours : ${nbNodes} mots, ${nbEdges} liens`, "#e8f5e9");
+				updateTitreGraph("Graphe complet chargé mais non affiché");
+				
+			<!-- FIN DE CHARGER LES DONNÉES INITIALE -->			
+			}
+			else {
+				showNotification("❌ Fichier JSON invalide : pas de nodes ou edges");
+				}			
+			// Bloque le menu contextuel
+			document.getElementById("graph-container").addEventListener("contextmenu", function (e)
+			{e.preventDefault(); });				
+		} catch (error) {
+					console.error('Erreur lors du chargement du fichier JSON:', error);
+					}
+  } 
+ /////////////////////<!-- FIN DU CHARGER LES DONNÉES INITIALES a partir de DATA.JSON  -->/////
+	
+	
+///////////// AFFICHAGE DES GRAPHES  ///////	DISPLAYGRAPH   ///////////////////////////
+function displayGraph(graphData, options = {}) {
+    const defaultOptions = {
+        rescale: true,
+        random: false,
+        showEdges: true
+    };
+
+    const finalOptions = { ...defaultOptions, ...options };
+    lastGraphOptions = { ...finalOptions }; // sauvegarde l’état effectif utilisé
+    const { rescale, random, showEdges } = finalOptions; 
+
+	if (rescale) {
+    rescaleGraphLayout(graphData, 0.6);
+	}
+    // ▶️ Construire le graphe à utiliser : avec ou sans les aretes
+  let graphToUse;
+  if (!showEdges) {
+    graphToUse = {
+      nodes: [...graphData.nodes],
+      edges: []  // ✅ on retire les arêtes
+    };
+  } else {
+    graphToUse = graphData;
+  } 
+ if (s) {   // Détruire l'instance actuelle de Sigma.js
+  s.unbind('overNode');
+  s.unbind('outNode');
+  s.refresh(); // force le redraw sans survol
+  s.kill();
+}
+	lastGraphDisplayed = graphData;
+	lastDisplayOptions = options;
+	const nodeCount = graphData.nodes.length  ;
+
+  //console.log("#nodes, initialgraphe",nodeCount ,random );
+//  DÉFINIR LA CATÉGORIE DU GRAPHE
+  let sizeClass = nodeCount < 100 ? "small"
+                  : nodeCount <= 500 ? "medium"
+                  : "big";
+  console.log(" DISPLAYGRAPH Type de graphe :", sizeClass, " Nœuds :", nodeCount, "rescale :",rescale ); 
+
+// redisposer aleatoirement les grands graphes sauf si random est à true
+  if ( !random && nodeCount> 500) {
+	applyRandomLayout(graphData);
+};
+//  Définir les tailles des nœuds pour chaque catégorie de graphe
+const nodeSizes = {
+  small: { vedette: 12, normal: 6 },
+  medium: { vedette: 8, normal: 4 },
+  big: { vedette: 8, normal: 4 }
+};
+//  Définir les paramètres d’affichage des tailles dans Sigma
+const settingsSizes = {
+  small: { minNode: 2, maxNode: 16 },
+  medium: { minNode: 2, maxNode: 12 },
+  big: { minNode: 2, maxNode: 6 }
+};
+	//  Vérifie si la vedette est présente dans ce sous-graphe
+	const vedetteInGraph = vedette && graphData.nodes.some(n => n.id === vedette.id);
+	//console.log ("displaygraph : vedette présente  ", vedetteInGraph, "label", vedette.label);
+
+graphData.nodes.forEach(node => {
+  // ▶️ Couleur et taille des nodes
+if (vedette && node.id === vedette.id) {
+    node.color = "#e74c3c"; // 🔴 vedette
+    node.size = nodeSizes[sizeClass].vedette;
+  } else {
+    node.size = nodeSizes[sizeClass].normal;
+  }
+  node.originalColor = node.color;
+  // ▶️ Sauvegarde du label original
+if (!node.originalLabel) node.originalLabel = node.label;
+  // ▶️ Détection vedette ou voisin
+  const isVedetteNode = vedette && node.id === vedette.id;
+  const isNeighbor = vedette && graphData.edges.some(edge =>
+    (edge.source === vedette.id && edge.target === node.id) ||
+    (edge.target === vedette.id && edge.source === node.id)
+  );
+  
+//if (graphData.nodes.length > 100 ) {
+	// ▶️ Affichage du label seulement pour vedette + voisins
+	//	node.label = (isVedetteNode || isNeighbor)
+	//	? node.originalLabel : " ";  // invisible visuellement, mais encore exploitable
+	//}
+	
+});
+
+/// Couleur et sauvegarde des arêtes
+  graphData.edges.forEach(edge => {
+    if (!edge.color) {
+      edge.color = sizeClass === "big"
+        ? "rgba(0, 0, 255, 0.2)"
+        : "rgba(0, 0, 255, 0.6)";
+    }
+    if (!edge.originalColor) edge.originalColor = edge.color;
+  });
+ // Sauvegarde des couleurs initiales pour restauration ultérieure
+	graphData.nodes.forEach(node => {
+		if (!node.originalColor) node.originalColor = node.color;
+		});
+	graphData.edges.forEach(edge => {
+		if (!edge.originalColor) edge.originalColor = edge.color;
+		});
+ //  Paramètres Sigma adaptés
+  const settings = {
+    minNodeSize: settingsSizes[sizeClass].minNode,
+    maxNodeSize: settingsSizes[sizeClass].maxNode,
+    minEdgeSize: 0.4,
+    maxEdgeSize: 1.2,
+    font: "Arial",
+    fontsize: sizeClass === "small" ? 20: (sizeClass === "medium" ? 14 : 10),
+    defaultLabelColor: "#000",
+	labelThreshold: 0,           // ✅ tous les labels visibles même sans zoom
+  
+  labelSize: "fixed" ,    // ou   "proportional"
+  labelDensity: 1,             // 1 = 100% des labels affichés
+  labelGridCellSize: 0         // 0 = pas de limite de densité spatiale
+  };
+
+// fonction pour recalibrer laffichage du graphe dans 80% du container
+function rescaleGraphLayout(graphData, scale = 0.6) {
+  //  Récupère les extrêmes des coordonnées
+  const xs = graphData.nodes.map(n => n.x);
+  const ys = graphData.nodes.map(n => n.y);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const centerX = (minX + maxX) / 2;
+  const centerY = (minY + maxY) / 2;
+  const rangeX = maxX - minX;
+  const rangeY = maxY - minY;
+  const maxRange = Math.max(rangeX, rangeY);
+  //  Applique un zoom centrant et réducteur sur tous les nœuds
+  graphData.nodes.forEach(node => {
+    node.x = ((node.x - centerX) / maxRange) * scale;
+    node.y = ((node.y - centerY) / maxRange) * scale;
+  });
+}
+function applyRandomLayout(graphData, range = 1) {
+  graphData.nodes.forEach(node => {
+    node.x = (Math.random() - 0.5) * range;
+    node.y = (Math.random() - 0.5) * range;
+  });
+}
+//  Création du graphe
+    s = new sigma({
+      graph: graphToUse,
+      container: 'graph-container',
+      settings: settings
+    });
+s.unbind('clickNode');  // ✅ empêche les doublons
+ClicNodeEvents(s); // réattache les clics après recréation du graphe
+	
+	// ✅ transférer la balise dans l'objet s.graph
+	s.graph.isAdjacency = graphData.isAdjacency || false;
+	
+    s.refresh();
+	
+	//affiche les stats
+		updateGraphStats(graphData);	   
+	// survol des noeuds
+		SurvolNoeud(s);  
+	// Afficher des informations au clic gauche des nœuds
+		s.unbind('clickNode');  // ✅ empêche les doublons
+		ClicNodeEvents(s);
+	// Afficher des informations au clic droit des nœuds	 
+		RightClickNodeEvents(s); 
+  }
+//////////// FIN FONCTION POUR AFFICHER UN GRAPHE  
+
+////BANNIERE = TITRE DES GRAPHES  	
+function setGraphBanner(text, color = "#f0f0f0") {
+  const banner = document.getElementById("graph-title-banner");
+  if (banner) {
+    banner.textContent = `${text}`;
+    banner.style.backgroundColor = color;
+  }
+}
+////FIN BANNIERE
+
+//AFFICHAGE STATS (nbre points et aretes) coin haut gauche du cadre du graphe
+function updateGraphStats() {
+    const visibleNodes = s.graph.nodes().filter(node => !node.hidden);
+    const visibleEdges = s.graph.edges().filter(edge => !edge.hidden);
+    const nbNodes = visibleNodes.length;
+    const nbEdges = visibleEdges.length;
+   
+	const isReduit = s.graph.type === "reduit"; // si tu utilises un flag type
+    const vraiNbEdges = isReduit ? nbEdges : nbEdges / 2;
+ 
+	const statsDiv = document.getElementById("graph-stats-display");
+    statsDiv.textContent = `${nbNodes} mot${nbNodes > 1 ? 's' : ''}, ${vraiNbEdges} lien${vraiNbEdges > 1 ? 's' : ''}`;
+}
+// FIN AFFICHAGE STATS 
+
+//AFFICHAGE TITRE du graphe = NOM du bouton à droite des stat
+function updateTitreGraph(titre) { 
+	const TitreDiv = document.getElementById("graph-titre-display");
+    if (TitreDiv) {
+    TitreDiv.textContent = titre;
+	}
+}
+// FIN AFFICHAGE TITRE 
+
+
+///MESSAGES À L'UTILISATEUR //////
+
+///MESSAGES À DURÉE DÉTERMINÉE 	 par option
+	function showNotification(message, duration = 3000) {
+  const notif = document.getElementById("notification");
+  if (!notif) return;
+
+  notif.innerHTML = message;           // ✅ Permet le HTML enrichi
+  notif.style.display = "block";       // ✅ Affiche la notification
+  notif.style.opacity = "1";           // Facultatif : effet fondu possible
+
+  // ✅ Annule tout précédent timeout pour éviter les conflits
+  if (notif.dismissTimeout) {
+    clearTimeout(notif.dismissTimeout);
+  }
+
+  notif.dismissTimeout = setTimeout(() => {
+    notif.style.display = "none";
+  }, duration);
+}
+
+///MESSAGES AVEC BOUTON "FERMER" INCORPORÉ
+	function showNotif(message) {
+	const notif = document.getElementById("graph-message");
+	if (notif) {
+    notif.innerHTML = `
+      <div style="text-align: right;">
+        <button onclick="document.getElementById('graph-message').style.display='none'"
+                style="padding: 4px 10px; background:#ccc; border:none; border-radius:4px;">
+          Fermer
+        </button>
+      </div>
+      ${message}
+    `;
+    notif.style.display = "block"; 
+	makeDraggable(notif);  // active le drag
+  }
+}
+
+////fin MESSAGES ////////////
+  
+   // Charger le graphe lorsque la page est prête
+    window.onload = loadGraph;
+		
+<!-- BOUTONS VERTS AU DESSUS DU GRAPHE  -->
+
+///// ️ Activation du panneau d'AIDE au clic sur le bouton "Aide"
+document.getElementById("help-btn").addEventListener("click", () => {
+  const helpModal = document.getElementById("help-modal");
+  if (helpModal) {
+    helpModal.style.display = "block";
+  }
+});
+///// FIN Activation du panneau d'AIDE au clic sur le bouton "Aide"
+
+//  bouton "GRAPHE COMPLET" 
+//  affichage invisible du graphe complet stocké dans storedGraphComplet au chargement json
+	document.getElementById('graphe-complet').addEventListener('click', function () {
+	
+	if (encours === complet ) { 
+	console.log("encours =", encours);
+	showNotification("⚠️ le graphe complet est déjà le graphe encours.");
+	return ; 
+	}
+	
+  showNotification("Patientez quelques secondes, le graphe complet est volumineux !");
+
+  setTimeout(() => {
+    // ✅ Vide le graphe actuel pour éviter doublons
+    s.graph.clear();
+	s.refresh();
+
+    // ✅ Recharge les données complètes sans affichage visible
+    storedGraphComplet.nodes.forEach(node => s.graph.addNode(node));
+    storedGraphComplet.edges.forEach(edge => s.graph.addEdge(edge));
+
+    // ✅ Mise à jour des références
+    storedGraphEncours = storeGraph(storedGraphComplet); // complet devient encours 
+	encours = complet ; //flag de qui est encours
+    storedGraphfiltre = null;
+
+	updateGraphStats(s.graph);
+	
+    const nbNodes = storedGraphEncours.nodes.length;
+	const nbEdges = storedGraphEncours.edges.length;
+    setGraphBanner(`Graphe complet en cours : ${nbNodes} mots, ${nbEdges} liens`, "#e8f5e9");
+
+    // ❌ Ne pas appeler s.refresh() ici = pas d’affichage visuel
+    // ❌ Ne pas appeler displayGraph()
+    // ✅ Le graphe est prêt en mémoire
+
+  }, 200);
+  
+ updateTitreGraph("Graphe Complet chargé ");
+  
+});
+// FIN  du bouton "GRAPHE COMPLET" 	
+
+//BOUTON FILTRER
+document.getElementById('filtre-btn').addEventListener('click', function () {
+  const panel = document.getElementById('filter-panel');
+  panel.style.display = (panel.style.display === "none") ? "block" : "none";
+});
+
+document.getElementById('apply-filter-btn').addEventListener('click', function () {
+  const panel = document.getElementById('filter-panel');
+  panel.style.display = "none";
+  const selectedKeywords = Array.from(
+  document.querySelectorAll('#catgram-filters input[type="checkbox"]:checked')
+  ).map(input => input.value);
+ // console.log("✅ Catégories cochées :", selectedKeywords);
+
+  const minSyno = parseInt(document.getElementById('min-syno').value, 10) || 0;
+  
+  const maxSyno = parseInt(document.getElementById('max-syno').value, 10) || 0;
+  
+  const standardKeywords = ["adj.", "verbe", "subst.", "adv.", "part.", "loc.", "prép.", "interj."];
+  const allowedNodeIds = new Set();
+  const nodes = storedGraphEncours.nodes.filter(n => {
+  const hasSyno = (n["nombre de synonymes"] || 0) >= minSyno && (n["nombre de synonymes"] || 0) <= maxSyno ;
+  //console.log("hasSyno=",hasSyno);
+    let matchCatgram = true;
+    if (selectedKeywords.length > 0) {
+      const matchStandard = (n.catgram || []).some(cat =>
+        selectedKeywords.some(keyword =>keyword !== "autres" && cat.includes(keyword)) );
+      const matchAutres = selectedKeywords.includes("autres") &&
+        !(n.catgram || []).some(cat => standardKeywords.some(std => cat.includes(std)) );
+   //   if (matchAutres) {console.log("🎯 AUTRES :", n.label, "→", n.catgram); }
+      matchCatgram = matchStandard || matchAutres;
+    }
+    const keep = hasSyno && matchCatgram;
+    if (keep) allowedNodeIds.add(n.id);
+    return keep;
+  });
+
+  const edges = storedGraphEncours.edges.filter(e =>
+    allowedNodeIds.has(e.source) && allowedNodeIds.has(e.target)
+  );
+  storedGraphfiltre = { nodes, edges };
+  storedGraphEncours = storeGraph(storedGraphfiltre); // devient le graphe actif
+  
+  displayGraph(storedGraphfiltre, { filtregraph: true });
+  startForceAtlas2(storedGraphfiltre, 100);
+  const nbNodes = storedGraphEncours.nodes.length; 
+  const nbEdges = storedGraphEncours.edges.length; 
+  setGraphBanner(`Graphe filtré en cours : ${nbNodes} mots, ${nbEdges/2} liens`, "#e8f5e9");
+  //showNotification(`${nodes.length} mots, ${edges.length / 2} liens.`);
+  encours = filtre ; //flag pour qui est encours
+  updateTitreGraph("Graphe filtré affiché");
+  
+});
+
+document.getElementById('close-filter-panel').addEventListener('click', function () {
+  document.getElementById('filter-panel').style.display = "none";
+});
+
+document.getElementById('filter-help-btn').addEventListener('click', function () {
+  showNotif (`
+  <strong> Aide sur le filtrage </strong><br>
+  • Le filtrage, du graphe en cours, se fait sur trois conditions appliquées en même temps : la catégorie grammaticale (catgram), le nombre minimum de synonymes et le nombre maximum de synonymes.<br>
+  • Cochez une ou plusieurs catégories grammaticales pour afficher les mots qui contiennent au moins une de ces catégories dans leurs attributs.<br>
+  • Les mots peuvent appartenir à plusieurs catégories (ex. "adj." et "subst.").<br>
+  • La case <em>Autres</em> sélectionne les mots hors des catégories explicites.<br>
+  • Si aucune catégorie n’est cochée, seuls les seuils sur les nombres de synonymes sont appliqués.
+  `);
+});
+//FIN bouton FILTRER
+
+//  BOUTON "GRAPHE FILTRE" 
+//  affiche le graphe stocké dans storedGraphfiltre
+    document.getElementById('graphe-filtre').addEventListener('click', function() {
+	if (storedGraphfiltre && storedGraphfiltre.nodes.length > 0 ) { // && storedGraphfiltre.edges.length > 0) { 
+		displayGraph (storedGraphfiltre, { filtregraph: true, });
+		startForceAtlas2(storedGraphfiltre, 200);
+		encours = filtre ; //flag pour qui est encours
+		console.log ("encours =",encours);
+		updateTitreGraph("Graphe filtré");
+	} else {
+		showNotification('⚠️ Pas de graphe filtré, le graphe complet est en cours.');
+		}
+	});
+// FIN  du bouton "GRAPHE filtré" 	
+
+//RAFRAICHIR pour effacer les traces des survols
+document.getElementById("refresh-graph-btn").addEventListener("click", () => {
+  if (!s) return;
+
+  // ▶️ Étape 1 : stocker une copie propre du graphe affiché
+  const refreshedGraph = storeGraph(s.graph); //  utilise ta fonction de clonage Graphology
+
+  // ▶️ Étape 2 : détruire complètement l’affichage actuel
+ // s.kill(); ne marche pas
+  //document.getElementById("graph-container").innerHTML = "";
+
+  // ▶️ Étape 3 : réafficher le graphe stocké à l’identique
+  displayGraph(refreshedGraph, { rescale: false });
+  setTimeout(() => {
+    startForceAtlas2(s);
+    setTimeout(() => s.stopForceAtlas2(s), 1000); //   durée à adapter
+  }, 100); // léger délai pour laisser Sigma se réinitialiser
+});
+//FIN de RAFRAICHIR
+
+/// RECENTRER LE GRAPHE AFFICHÉ SUR UN MOT 
+document.getElementById("recentrer-btn").addEventListener("click", function() {
+    const mot = document.getElementById("mot-recentrage").value.trim().toLowerCase();
+    if (!mot) {
+        showNotification("⚠️ Veuillez entrer un mot pour le mettre en évidence.");
+        return;
+    }
+
+    const node = s.graph.nodes().find(n => n.label && n.label.toLowerCase() === mot);
+
+    if (!node) {
+        showNotification(`❌ Le mot "${mot}" n'est pas présent dans le graphe affiché.`);
+        return;
+    }
+
+    if (typeof node.x !== "number" || typeof node.y !== "number") {
+        showNotification(`❌ Coordonnées invalides pour le nœud "${node.label}".`);
+        return;
+    }
+
+    // Sauvegarder couleur et taille d'origine
+    const originalColor = node.color;
+    const originalSize = node.size;
+
+    // Masquer temporairement les labels des autres nœuds
+    s.graph.nodes().forEach(n => {
+        if (n.id !== node.id) {
+            n.hiddenLabel = n.label; // sauvegarde
+            n.label = ""; // masque
+        }
+    });
+
+    // Mettre en évidence le nœud sélectionné
+    node.color = '#e74c3c'; // rouge
+    node.size = originalSize * 3;
+
+    s.refresh();
+    showNotification(`✅ Le mot "${node.label}" est mis en évidence.`);
+
+    // Rétablir après délai
+    setTimeout(() => {
+        node.color = originalColor;
+        node.size = originalSize;
+        s.graph.nodes().forEach(n => {
+            if (n.hiddenLabel !== undefined) {
+                n.label = n.hiddenLabel;
+                delete n.hiddenLabel;
+            }
+        });
+        s.refresh();
+        showNotification(`🔹 Mise en évidence terminée pour "${node.label}".`);
+    }, 2500); // 2,5 secondes
+});
+
+
+///fin  RECENTRER LE GRAPHE AFFICHÉ SUR UN MOT 
+
+
+
+<!-- BOUTONS COLONNE GAUCHE DE LA PAGE  -->	
+
+//// 🔍 RECHERCHE D'UN NOEUD DANS LE GRAPHE EN COURS////////////////////////////////////////////
+	document.getElementById("search-node-btn").addEventListener("click", function() {
+    let searchTerm = document.getElementById("node-search").value.toLowerCase().trim();
+    let resultsContainer = document.getElementById("search-results");
+    resultsContainer.innerHTML = "";  // ✅ Efface les résultats précédents
+    let foundNodes = storedGraphEncours.nodes.filter(node => node.label.toLowerCase().includes(searchTerm));
+
+    if (foundNodes.length > 0) {
+	
+	showNotification(`Recherche et sélection du mot en cours.`);
+        foundNodes.forEach(node => {
+            let listItem = document.createElement("li");
+            listItem.innerHTML = `<strong>${node.label}</strong>`;
+            listItem.style.cursor = "pointer";
+            listItem.style.padding = "5px";
+            listItem.style.borderBottom = "1px solid #ddd";    
+			listItem.addEventListener("click", function() {
+				highlightNode(node.id);  // ✅ Met en évidence le nœud sélectionné
+				selectedNodeId = node.id;  // ✅ Stocke l'ID du nœud sélectionné		
+				vedette = node  ;     // ✅ Stocke le nœud sélectionné via recherche
+				console.log("📌 Noeud sélectionné via recherche dans graphe affiché :", vedette);
+
+// Vérifie si le nœud est présent dans le graphe affiché (s)
+let nodeInDisplayedGraph = s.graph.nodes().find(n => n.id === node.id);
+if (!nodeInDisplayedGraph) {
+    showNotification(`⚠️ Le mot "${node.label}" est dans le graphe en cours mais pas dans le graphe affiché.`);
+}
+			//  Affichage du nom de la vedette dans info-text
+			var infoText = document.getElementById('info-text');
+			infoText.innerHTML = `<strong style="font-size: 18px; color: red;">${vedette.label}</strong>`;
+
+			var infoHTML = `
+				<p><strong style="font-size: 12px; " > <strong style="font-size: 22px; font-weight: bold; color:red ">${vedette.label}</strong></p>
+				<p><strong style="font-size: 12px; " >Informations dans le dictionnaire complet :</strong></p>	
+				<p>Variantes: ${node.variantes?.join(', ') || 'Aucune'}</p>
+				<p>Catgram: ${node.catgram?.join(', ') || 'Aucun'}</p>
+				<p>Nombre de synonymes: ${node["nombre de synonymes"] || '0'}</p>
+				<p>Synonymes: ${node.synonymes?.join(', ') || 'Aucun'}</p>
+				<p>Antonymes: ${node.antonymes?.join(', ') || 'Aucun'}</p>
+				<p>Cliques:<br> ${node.cliques?.map(clique => clique.join(', ').replace(/;/g, ';<br>')).join('<br>') || 'Aucune'}</p>
+ 
+				<!--<p>Liste10: ${node.liste10?.map(item => item.map(subItem =>	subItem.join(': ')).join(', ')).join('; ') || 'Aucune'}</p>	-->
+				`;
+				
+			//affichage du popup avec toutes les infos du node
+			showNotif(infoHTML);
+							
+			// ✅ ACTIVE LES BOUTONS
+				document.getElementById("show-neighbors-btn").disabled = false; 
+				document.getElementById("show-cliques-btn").disabled = false;
+				document.getElementById("show-syno2-btn").disabled = false;
+				document.getElementById("show-adjacency-btn").disabled = false;  
+			resultsContainer.innerHTML = "";  // ✅ Masque la liste après sélection
+            });
+            resultsContainer.appendChild(listItem);
+        });
+    } else {
+        resultsContainer.innerHTML = "<li>❌Aucun mot trouvé.</li>";
+    }
+});
+
+//////////SURLIGNE
+	function highlightNode(nodeId) {
+    s.graph.nodes().forEach(node => {
+        node.color = (node.id === nodeId) ? "#e74c3c" : "#3498db"; // 🔴 Rouge pour le nœud trouvé, 🔵 Bleu pour les autres
+		node.size = (node.id === nodeId) ? 30 : 8 ;
+    });
+///////FIN DE SURLIGNE	
+	
+	//  Vérifier si un graphe est affiché  
+	if (!lastGraphDisplayed || !lastGraphDisplayed.nodes || lastGraphDisplayed.nodes.length === 0) {
+        return; // cas du graphe complet non affiché invisible
+    }
+	else{
+	    s.refresh();  // ✅ Met à jour l'affichage du graphe
+	}
+}
+//// FIN de RECHERCHE D'UN NOEUD DANS LE GRAPHE AFFICHÉ////////////////////// 
+
+//////////// GRAPHE DES SYNONYMES = VOISINS de la vedette /////////// 
+document.getElementById("show-neighbors-btn").addEventListener("click", function () {
+  if (!vedette) {
+    showNotification("❌ Aucun mot sélectionné !");
+    return;
+  }
+	// console.log("📌graphe des voisins pour la vedette :", vedette.label);
+  // ✅ Filtrer toutes les arêtes contenant le nœud sélectionné
+  let subGraphEdges = storedGraphEncours.edges.filter(
+  edge => edge.source === vedette.id || edge.target === vedette.id  );
+  // ✅ Extraire les nœuds impliqués dans ces arêtes
+  let neighborIds = new Set();
+  subGraphEdges.forEach(edge => {
+    neighborIds.add(edge.source);
+    neighborIds.add(edge.target);
+  });
+    
+  // ✅ Inclure les nœuds du graphe initial
+  let subGraphNodes = storedGraphEncours.nodes.filter(node => neighborIds.has(node.id));
+
+	let subGraph = { nodes: subGraphNodes, edges: subGraphEdges };
+	
+	// ✅ Vérification dans la console avant affichage
+    //console.log("📌 Sous-graphe Syno1 généré :", { nodes: subGraphNodes, edges: subGraphEdges });
+   
+    // #e74c3c 🔴 Rouge pour la vedette bleu les autres   	
+	// ✅ Appliquer les couleurs pour forcer vedette rouge, autres en bleu
+	subGraphNodes.forEach(node => {
+	node.color = (node.id === vedette.id) ? "#e74c3c" : "#3498db";
+	});
+		 
+	// ✅ Message si aucun synonyme
+	if (subGraphEdges.length === 0) {
+		showNotification("❌ Aucun synonyme trouvé dans le graphe en cours.");
+		} ;
+		
+	// ✅ Afficher le sous-graphe
+	displayGraph(subGraph);
+	setTimeout(() => {
+			startForceAtlas2(subGraph,100);	
+			const camera = s.camera;
+			const zoomRatio = 0.8; // >1 pour zoomer, <1 pour dézoomer
+			camera.goTo({
+				ratio: camera.ratio / zoomRatio  
+				});	
+		}, 200); // petit délai pour garantir que s est prêt
+	
+		updateTitreGraph("Graphe Synonymes 1");
+	
+});
+//// FIN DE CALCUL ET AFFICHAGE DU GRAPHE DES SYNONYMES 
+  
+//// Graphe ADJACENCE /////////////////////////////////////////////
+document.getElementById("show-adjacency-btn").addEventListener("click", function () {
+    generateAdjacencyGraph(vedette);
+});
+
+function generateAdjacencyGraph(vedette) {
+    if (!vedette) {
+        showNotification("❌ Aucun mot sélectionné !");
+        return;
+    }
+    //console.log("📌 Génération du graphe d'adjacence pour :", vedette);
+    // ✅ Étape 1 : Trouver les voisins directs (niveau 1)
+    let level1Neighbors = new Set();
+    storedGraphEncours.edges.forEach(edge => {
+        if (edge.source === vedette.id) level1Neighbors.add(edge.target);
+        if (edge.target === vedette.id) level1Neighbors.add(edge.source);
+    });
+    // ✅ Étape 2 : Trouver les voisins des voisins (niveau 2)
+    let level2Neighbors = new Set();
+    level1Neighbors.forEach(neighborId => {
+        storedGraphEncours.edges.forEach(edge => {
+            if (edge.source === neighborId && edge.target !== vedette.id) level2Neighbors.add(edge.target);
+            if (edge.target === neighborId && edge.source !== vedette.id) level2Neighbors.add(edge.source);
+        });
+    });
+    // ✅ Étape 3 : Construire le sous-graphe Syno2
+    let allSyno2Nodes = new Set([...level1Neighbors, ...level2Neighbors, vedette.id]);
+    let subGraphNodes = storedGraphEncours.nodes.filter(node => allSyno2Nodes.has(node.id));
+
+    // ✅ Créer un Set des IDs des nœuds valides pour éviter l'erreur
+    let validNodeIds = new Set(subGraphNodes.map(node => node.id));
+
+    // ✅ Filtrer les arêtes pour ne garder que celles qui connectent des nœuds existants
+    let subGraphEdges = storedGraphEncours.edges.filter(edge =>
+        validNodeIds.has(edge.source) && validNodeIds.has(edge.target) );
+
+    // ✅ Étape 4 : Garder uniquement `vedette` et ses voisins directs **avec leurs connexions**
+    let adjacencyNodes = new Set([...level1Neighbors, vedette.id]);  // ✅ On garde `vedette` et ses voisins directs
+    let finalNodes = storedGraphEncours.nodes.filter(node => adjacencyNodes.has(node.id));  // ✅ Récupérer les nœuds valides
+
+    let finalEdges = subGraphEdges.filter(edge =>  // ✅ Vérification supplémentaire pour éviter les erreurs
+        adjacencyNodes.has(edge.source) && adjacencyNodes.has(edge.target) );
+     
+	let adjacencyGraph = {
+    nodes: finalNodes,
+    edges: finalEdges,
+    isAdjacency: true // ✅ balise intégrée
+	};
+    console.log("📌 Graphe d'adjacence généré :", adjacencyGraph);
+
+    // ✅ Vérification avant affichage
+    //console.log("📌 Vérification des nœuds :", adjacencyGraph.nodes);
+    //console.log("📌 Vérification des arêtes :", adjacencyGraph.edges);
+	console.log("📌 Vérification de length :", adjacencyGraph.edges.length);
+
+	// ✅ Message si aucun synonyme
+	if (adjacencyGraph.edges.length === 0) {
+		showNotification("❌ Aucun synonyme trouvé dans le graphe en cours.");
+		} 
+		else {
+		// ✅ AFFICHER LE GRAPHE D'ADJACENCE
+		displayGraph(adjacencyGraph);
+		setTimeout(() => {
+			startForceAtlas2(adjacencyGraph,100);	
+			const camera = s.camera;
+			const zoomRatio = 0.8; // >1 pour zoomer, <1 pour dézoomer
+			camera.goTo({
+				ratio: camera.ratio / zoomRatio  
+				});	
+		}, 200); // petit délai pour garantir que s est prêt
+
+	updateTitreGraph("Graphe Adjacence");
+		
+		};
+
+    // ✅ Supprimer l’ancien bouton s’il existe déjà
+    const existingBtn = document.getElementById("remove-vedette-links-btn");
+    if (existingBtn) existingBtn.remove();
+
+    // ✅ Créer dynamiquement le bouton
+    const btn = document.createElement("button");
+    btn.id = "remove-vedette-links-btn";
+    btn.textContent = "Adjacence sans liens avec la vedette";
+    btn.classList.add("hide-vedette-edges-btn");
+    
+	btn.style.height = "15px";
+	btn.style.width = "200px";
+	btn.style.marginTop = "1px"; /* ✅  espace au-dessus du bouton */
+	btn.style.fontSize = "11px";
+    btn.style.backgroundColor = "#ffd9b3";
+    btn.style.color = "black";
+    btn.style.border = "none";
+    btn.style.padding = "2px";
+    btn.style.borderRadius = "5px";
+    btn.style.cursor = "pointer";
+
+    document.getElementById("info-buttons").appendChild(btn);
+
+    btn.addEventListener("click", function () {
+        const edgesToRemove = s.graph.edges().filter(edge =>
+            edge.source === vedette.id || edge.target === vedette.id
+        );
+        edgesToRemove.forEach(edge => {
+            s.graph.dropEdge(edge.id);
+        });		 
+        s.refresh();
+		  // ✅ Mettre à jour les statistiques après suppression
+		updateGraphStats({
+			nodes: s.graph.nodes(),
+			edges: s.graph.edges()
+		}); 
+        showNotif(` ✅ Liens avec "${vedette.label}" supprimés.`);
+        btn.remove(); // ✅ Disparaît après usage
+    });
+}
+//// FIN Graphe ADJACENCE //////////////////////////////////
+
+////FONCTION POUR CALCULER ET AFFICHER LE GRAPHE DES SYNO1 ET SYNO2 D'UNE VEDETTE
+document.getElementById("show-syno2-btn").addEventListener("click", function() {
+    if (!vedette) {
+        showNotification("❌ Aucun mot sélectionné !");
+        return;
+    }
+	//console.log("📌 Génération du graphe des SYNO2 pour :", vedette);
+
+    // ✅ Étape 1 : Trouver les voisins directs (niveau 1)
+    let level1Neighbors = new Set();
+    storedGraphEncours.edges.forEach(edge => {
+        if (edge.source === vedette.id) level1Neighbors.add(edge.target);
+        if (edge.target === vedette.id) level1Neighbors.add(edge.source);
+    });
+    // ✅ Étape 2 : Trouver les voisins des voisins (niveau 2)
+    let level2Neighbors = new Set();
+    level1Neighbors.forEach(neighborId => {
+        storedGraphEncours.edges.forEach(edge => {
+            if (edge.source === neighborId && edge.target !== vedette.id) level2Neighbors.add(edge.target);
+            if (edge.target === neighborId && edge.source !== vedette.id) level2Neighbors.add(edge.source);
+        });
+    });
+   // ✅ Étape 3 : Construire le sous-graphe "syno2"
+let allSyno2Nodes = new Set([...level1Neighbors, ...level2Neighbors, vedette.id]);
+
+// ▶️ Création des nœuds du sous-graphe avec couleur selon niveau
+let subGraph  = { nodes: [], edges: [] };
+allSyno2Nodes.forEach(nodeId => {
+    const originalNode = storedGraphEncours.nodes.find(n => n.id === nodeId);
+    if (originalNode) {
+        let color = "#000000"; // couleur par défaut
+        if (nodeId === vedette.id) color = "#FFD700"; // vedette : jaune
+        else if (level1Neighbors.has(nodeId)) color = "#1f77b4"; // niveau 1 : bleu
+        else if (level2Neighbors.has(nodeId)) color = "#ff7f0e"; // niveau 2 : orange
+        subGraph.nodes.push({
+            ...originalNode,
+            color: color
+        });
+    }
+});
+// ▶️ Ajouter les arêtes entre les nœuds du sous-graphe
+storedGraphEncours.edges.forEach(edge => {
+    if (allSyno2Nodes.has(edge.source) && allSyno2Nodes.has(edge.target)) {
+        subGraph.edges.push({ ...edge });
+    }
+});
+// ✅ Message si aucun synonyme
+	if (subGraph.edges.length === 0) {
+		showNotification("❌ Aucun synonyme trouvé dans le graphe en cours.");
+		s.graph.clear();  // ✅ Effacer l'affichage du graphe
+		} 
+		else {	
+		// ✅ Afficher le sous-graphe "syno 1 et 2"
+		displayGraph( subGraph, { rescale: 0.6 } );
+		setTimeout(() => {
+			startForceAtlas2(subGraph,100);	
+			const camera = s.camera;
+			const zoomRatio = 0.8; // >1 pour zoomer, <1 pour dézoomer
+			camera.goTo({
+				ratio: camera.ratio / zoomRatio  
+				});	
+		}, 200); // petit délai pour garantir que s est prêt
+		
+		updateTitreGraph("Graphe Synonymes 1 et 2");
+		}		
+});
+////FIN fonction GRAPHE SYNO1 ET SYNO2 D'UNE VEDETTE
+
+//CLIQUES//////////////////////////////////////////////////////:::
+document.getElementById("show-cliques-btn").addEventListener("click", function () {
+	if (encours === complet ) {
+	showCliqueListPopup(vedette);     // ✅ ouvre le popup seulement si encours= complet 
+	}
+	else {
+	showNotification("⚠️ Pour afficher les cliques d'un mot, le graphe en cours doit être le graphe complet.");
+	return;
+	}
+	
+	generateAdjacencyGraph(vedette);  // ✅  affichage du graphe adjacence 
+	isAdjacency = true;	
+	
+});
+// Set global pour suivre quelles cliques sont surlignées
+let highlightedCliques = new Set();
+
+function toggleCliqueHighlight(cliqueWords, cliqueIndex) {
+    // Trouver les nodeId correspondant aux mots de la clique
+    let cliqueNodeIds = s.graph.nodes()
+        .filter(n => cliqueWords.includes(n.label))
+        .map(n => n.id);
+    // Trouver les arêtes entre ces nœuds
+    let cliqueEdgeIds = s.graph.edges()
+        .filter(e => cliqueNodeIds.includes(e.source) && cliqueNodeIds.includes(e.target))
+        .map(e => e.id);
+		const symbol = document.getElementById(`clique-symbol-${cliqueIndex}`);
+    if (highlightedCliques.has(cliqueIndex)) {
+        // Désurligner
+        cliqueNodeIds.forEach(id => {
+            let node = s.graph.nodes(id);
+             if (node) {
+            if (node.originalColor) node.color = node.originalColor;
+            node.isClique = false; // ✅ désactive le flag
+			}
+        });
+        cliqueEdgeIds.forEach(id => {
+            let edge = s.graph.edges(id);
+             if (edge) {
+            if (edge.originalColor) edge.color = edge.originalColor;
+            edge.isClique = false; // ✅ désactive le flag
+        }
+        });
+        highlightedCliques.delete(cliqueIndex);	
+	// ✅ Changer la pastille en vert
+        if (symbol) symbol.style.backgroundColor = "green";				
+    } else {
+        // Surligner
+        cliqueNodeIds.forEach(id => {
+            let node = s.graph.nodes(id);
+            if (node) {
+                 if (!node.originalColor) node.originalColor = node.color;
+            node.color = "#ff1493"; // ou autre couleur
+            node.isClique = true;  // ✅ flag pour indiquer qu'il appartient à une clique
+            }
+        });
+        cliqueEdgeIds.forEach(id => {
+            let edge = s.graph.edges(id);
+            if (edge) {
+                if (!edge.originalColor) edge.originalColor = edge.color;
+            edge.color = "#ff1493";
+            edge.isClique = true;  // ✅ flag pour indiquer qu'elle appartient à une clique
+            }
+        });
+        highlightedCliques.add(cliqueIndex);		
+	 // ✅ Changer la pastille en rouge
+        if (symbol) symbol.style.backgroundColor = "red";	
+    }
+    s.refresh();
+}
+function showCliqueListPopup(node) {
+    // ✅ Supprime un popup précédent si déjà affiché
+    let oldPopup = document.getElementById("clique-popup");
+    if (oldPopup) oldPopup.remove();
+
+    // ✅ Crée le nouveau popup
+    let popup = document.createElement("div");
+    popup.id = "clique-popup";
+    popup.style.position = "fixed";
+    popup.style.top = "100px";
+    popup.style.left = "12px";
+	popup.style.height = "628px"; // hauteur fixe de 625px pour masquer la colonne gauche
+	popup.style.width = "220px";
+    popup.style.background = "white";
+    popup.style.border = "1px solid black";
+    popup.style.padding = "10px";
+    popup.style.zIndex = "9999";
+    popup.style.maxHeight = "630px";
+    popup.style.overflowY = "auto";
+    popup.style.boxShadow = "0 2px 10px rgba(0,0,0,0.2)";
+	popup.innerHTML = `<h4>${node.cliques.length} cliques de : <strong><font color="red" size="+2">${node.label}</font></strong></h4>`;
+
+// ✅ Insérer ici le BOUTON EFFACER
+	let effacerBtn = document.createElement("button");
+	effacerBtn.textContent = "Effacer le hors cliques";
+	effacerBtn.style.display = "block";
+	effacerBtn.style.margin = "10px 0";
+	effacerBtn.addEventListener("click", function () {
+     if (isAdjacency) {
+        console.log("✅ Le graphe affiché est l'adjacence.");
+		// Masquer tous les nœuds NON dans une clique
+		s.graph.nodes().forEach(node => {
+        node.hidden = !node.isClique; });// ✅ masque si n'appartient pas à une clique
+		//affiche les stats
+		updateGraphStats(s.graph);
+		s.refresh(); 
+		} else {
+        console.log("❌ Ce n'est pas l'adjacence.");
+        showNotification("❌ Le graphe a changé. Le panneau Cliques est fermé.");
+        popup.remove();
+        return;
+		}
+});
+popup.appendChild(effacerBtn);
+
+// BOUTON REAFFICHER TOUT
+let reafficherBtn = document.createElement("button");
+reafficherBtn.textContent = "Réafficher tout";
+reafficherBtn.style.display = "block";
+reafficherBtn.style.margin = "10px 0";
+reafficherBtn.addEventListener("click", function () {
+    if (isAdjacency) {
+        console.log("✅ Le graphe affiché est l'adjacence.");    
+	  // Réafficher tous les nœuds
+    s.graph.nodes().forEach(node => { node.hidden = false;});
+    // Réafficher toutes les arêtes
+    s.graph.edges().forEach(edge => {edge.hidden = false;});	
+	//affiche les stats
+	updateGraphStats(s.graph);	
+    s.refresh();
+} else {
+        console.log("❌ Ce n'est pas l'adjacence.");
+        showNotification("❌ Le graphe a changé. Le panneau Cliques est fermé.");
+        popup.remove();
+        return;
+    }
+});
+popup.appendChild(reafficherBtn);
+  // ✅ Puis la liste des cliques
+  node.cliques.forEach((clique, index) => {
+    let item = document.createElement("div");      
+	item.innerHTML = `
+    <span class="clique-symbol" id="clique-symbol-${index}" data-index="${index}"></span> 
+    C${index + 1}: ${clique.join(', ')}
+	`;		
+    item.querySelector(".clique-symbol").addEventListener("click", () => {
+    toggleCliqueHighlight(clique, index);});	 
+    popup.appendChild(item);
+    });	
+	function extractCliqueSubgraph(cliqueLabels) {
+	const base = storedGraphEncours;  // graphe structurel complet
+	const labelToId = new Map(base.nodes.map(n => [n.label, n.id]));
+	const cliqueNodeIds = cliqueLabels.map(l => labelToId.get(l)).filter(Boolean);
+	const nodes = base.nodes.filter(n => cliqueNodeIds.includes(n.id));
+	const nodeIdSet = new Set(nodes.map(n => n.id));
+	const edges = base.edges.filter(e =>
+    nodeIdSet.has(e.source) && nodeIdSet.has(e.target)
+	);
+	return { nodes, edges };
+	}	
+	function rebuildGraphFromSurlignedCliques() {
+	const base = storedGraphEncours;  // graphe structurel complet
+	const cliqueLabels = s.graph.nodes()
+    .filter(n => n.isClique)
+    .map(n => n.label);
+	return extractCliqueSubgraph(cliqueLabels);
+	}
+//BOUTON FERMER MENU CLIQUES
+    let closeBtn = document.createElement("button");
+    closeBtn.textContent = "Fermer";
+    closeBtn.addEventListener("click", () => {
+		popup.remove();
+		if (Array.from(highlightedCliques).length >  0) {			
+			const rebuilt = rebuildGraphFromSurlignedCliques();
+			displayGraph(rebuilt, { random: false });
+		} else {
+		console.log("vedette des cliques", vedette);
+		highlightedCliques.clear();
+		storedGraphEncours = storeGraph(storedGraphComplet); // ✅ base complète
+		generateAdjacencyGraph(vedette);// ✅ Revient à l’adjacence normale
+     	}
+	});  
+    popup.appendChild(closeBtn);	
+    document.body.appendChild(popup);
+}
+//fin CLIQUES
+
+// FONCTION POUR LANCER PUIS CALCULER l'HISTOGRAMME du graphe affiché
+function lancerHistogram(nodes, edges) {
+
+if (!lastGraphOptions.showEdges) {
+showNotification(" Le graphe affiché ne contient pas de liens entre les mots, calcul de l'histogramme annulé.");
+return;
+}
+
+  if (nodes.length > 2000) {
+    demanderConfirmation(`⚠️ Le graphe contient ${nodes.length} mots. Le calcul va être long. Voulez-vous l'effectuer ?`, function(reponse) {
+      if (reponse) {
+	   showNotification(" Calcul de l'histogramme en cours, patientez.");
+        const histogram = calculateHistogram(nodes, edges);
+        const message = formatHistogram(histogram);
+        showNotif(message);
+      } else {
+        showNotification(" Calcul de l'histogramme annulé.");
+      }
+    });
+  } else {
+	 showNotification("Calcul de l'histogramme en cours, patientez.");     
+	setTimeout(() => {   // ✅ Petit délai pour que le DOM soit bien mis à jour
+      const histogram = calculateHistogram(nodes, edges);
+      const message = formatHistogram(histogram);
+      showNotif(message);
+    }, 100);
+  }
+}
+function calculateHistogram(nodes, edges) {  
+	  nodes = s.graph.nodes().filter(n => !n.hidden);
+      edges = s.graph.edges().filter(e => !e.hidden);
+   const histogram = {};
+    nodes.forEach(node => {
+        const degree = edges.filter(edge =>
+            edge.source === node.id || edge.target === node.id
+        ).length/2;	 
+        if (!histogram[degree]) {
+            histogram[degree] = { count: 0, ids: [] };
+        }
+        histogram[degree].count++;
+        histogram[degree].ids.push(node.label);
+    });
+    return histogram;
+}
+// Fonction pour formater l'HISTOGRAMME en une chaîne lisible
+function formatHistogram(histogram) {
+    let formattedMessage = "Histogramme du graphe affiché <br> nombre de liens : nombre de mots (mots dans ce cas)<br>";
+    for (const degree in histogram) {
+        formattedMessage += `${degree}: ${histogram[degree].count} `;
+        if (histogram[degree].ids.length > 0) {
+            formattedMessage += ` (${histogram[degree].ids.slice(0, 100).join(', ')})`;
+        }
+        formattedMessage += "<br>";
+    }
+    return formattedMessage;
+}
+// GESTIONNAIRE DU BOUTON SHOW-HISTO-BTN
+document.getElementById("show-histo-btn").addEventListener("click", function() {
+   
+	if (!lastGraphDisplayed || !lastGraphDisplayed.nodes || lastGraphDisplayed.nodes.length === 0) {
+		showNotification("❌ Aucun graphe affiché.");
+        return;
+    }
+	
+    // Récupérer les nœuds et arêtes du graphe affiché
+    const nodes = s.graph.nodes();
+    const edges = s.graph.edges();
+    // Calculer l'histogramme
+    const histogram = lancerHistogram(nodes, edges);
+    // Afficher l'histogramme dans la console
+	// console.log("✅ Histogramme du graphe affiché :", histogram);	
+	// Formater l'histogramme en message lisible
+    const message = formatHistogram(histogram);
+	//console.log("✅ Histogramme du graphe affiché formaté:", message);
+    // Afficher l'histogramme dans la zone de notification
+	// showNotif(message);
+});
+// FIN Fonction pour calculer l'HISTOGRAMME du graphe affiché
+
+//////COMPLETUDE DU GRAPHE AFFICHÉ
+document.getElementById("completude-btn").addEventListener("click", completeGraphEdgesFromInitial);
+
+function completeGraphEdgesFromInitial() {
+   if (!lastGraphDisplayed || !lastGraphDisplayed.nodes || lastGraphDisplayed.nodes.length === 0) {
+		showNotification("❌ Aucun graphe affiché, complétude impossible. ");
+        return;
+    }
+	
+	if (s.graph.nodes().length < 2000) { 
+	calculcompletude ();
+	}
+	else {
+    demanderConfirmation(`⚠️ Le graphe contient ${s.graph.nodes().length } mots. Le calcul va être long. Voulez-vous l'effectuer ?`, function(reponse)
+	{
+      if (!reponse) { 
+        showNotification(" Calcul de la complétude annulé.");
+		return;
+      }
+   else {
+	  calculcompletude ();
+}
+});
+}
+}
+function calculcompletude ()
+{
+showNotification("Calcul de la complétude en cours, patientez.");  
+    const currentNodes = s.graph.nodes();
+    const currentEdges = s.graph.edges();
+    const currentNodeIds = new Set(currentNodes.map(n => n.id));
+
+    // 🔍 Construire un ensemble d'arêtes existantes (source+target ou target+source)
+    const existingEdgeKeys = new Set(
+        currentEdges.map(e => {
+            const a = [e.source, e.target].sort().join("↔");
+            return a;
+        })
+    );
+    const completedEdges = [];
+	let newEdgesCount = 0;	 
+    storedGraphEncours.edges.forEach(edge => {
+        if (
+            currentNodeIds.has(edge.source) &&
+            currentNodeIds.has(edge.target)
+        ) {
+            const edgeKey = [edge.source, edge.target].sort().join("↔");
+            // ✅ Si l’arête est déjà présente, on la garde telle quelle
+            if (existingEdgeKeys.has(edgeKey)) {
+                completedEdges.push(edge);
+            }
+            // ✅ Sinon, on ajoute une nouvelle arête en gris
+            else {
+                completedEdges.push({
+                    ...edge,
+                    color: "#7f8c8d"  // 🎨 Gris pour les nouvelles arêtes
+                });
+				newEdgesCount++;
+            }
+        }
+    });
+	 //  Construction du graphe avec tous les nœuds visibles
+    let completedGraph = {
+        nodes: [...currentNodes],
+        edges: completedEdges
+    }; 
+    //console.log("📌 Arêtes totales :", completedEdges.length/2);    
+	displayGraph(completedGraph, { rescale: 0.6 });
+	setTimeout(() => {
+			startForceAtlas2(completedGraph ,100);	
+			const camera = s.camera;
+			const zoomRatio = 0.8; // >1 pour zoomer, <1 pour dézoomer
+			camera.goTo({
+				ratio: camera.ratio / zoomRatio  
+				});	
+		}, 200); // petit délai pour garantir que s est prêt
+		
+		updateTitreGraph("Graphe Complétude");
+}
+//////FIN COMPLETUDE du graphe affiché
+
+	
+///////EXTENSION ajout des syno au graphe affiché	///////////////
+// fonction associée au bouton "Extension"
+document.getElementById("extension-btn").addEventListener( "click", function () {
+   
+    // Récupérer les nœuds et arêtes du graphe affiché
+    const nodes = s.graph.nodes();
+    const edges = s.graph.edges();
+	lancerExtention(nodes, edges) ;
+});
+
+// Fonction pour lancer puis calculer l'EXTENSION du graphe affiché
+function lancerExtention(nodes, edges) { 
+
+ // ✅ Vérifier si un graphe est affiché  
+	if (!lastGraphDisplayed || !lastGraphDisplayed.nodes || lastGraphDisplayed.nodes.length === 0) {
+		showNotification("❌ Aucun graphe affiché, extension impossible. ");
+        return;
+    }
+  
+  if (nodes.length > 100) {
+    demanderConfirmation(`⚠️ Le graphe contient ${nodes.length} mots. Le calcul va être long. Voulez-vous l'effectuer ?`, function(reponse)
+	{
+      if (reponse) {
+        const extension = calculateExtension(nodes, edges);
+		} else {
+        showNotification(" Calcul de l'extension annulé.");
+		}
+    });
+  } else
+	{
+	 showNotification("Calcul de l'extension en cours, patientez.");     
+		setTimeout(() => {   // ✅ Petit délai pour que le DOM soit bien mis à jour
+		const extension = calculateExtension(nodes, edges);
+		}, 100);
+	}
+  
+function calculateExtension(nodes,edges) {   
+    // ✅ Récupérer les nœuds et arêtes du graphe affiché A
+    let baseNodes = [... nodes ];
+    let baseEdges = [... edges ];    
+    let baseNodeIds = new Set(baseNodes.map(node => node.id)); // 🔹 Ensemble des IDs des nœuds existants (A)
+    console.log(`📌 Nœuds initiaux du graphe affiché :`, baseNodeIds.size);
+   // console.log(`📌 Arêtes initiales du graphe affiché :`, baseEdges.length/2);
+    //console.log(`📌 IDs des nœuds initiaux :`, baseNodeIds);
+showNotification("Patientez quelques secondes, le traitement peut être long sur un graphe contenant de nombreux mots !");
+    // ✅ Trouver les synonymes (voisins) des nœuds du graphe affiché dans `storedGraphEncours`
+    let newNodes = new Set(); // 🔹 Stocke les synonymes à ajouter (B - A)
+    let newEdges = []; // 🔹 Stocke les nouvelles arêtes
+    baseNodes.forEach(node => {
+        let nodeId = node.id;      
+        // 🔍 Récupérer les voisins (= synonymes) via les arêtes dans le graphe initial
+        let synonyms = storedGraphEncours.edges
+            .filter(edge => edge.source === nodeId || edge.target === nodeId) // ✅ Garde les arêtes connectées à `nodeId`
+            .map(edge => edge.source === nodeId ? edge.target : edge.source); // 🔄 Récupère l’autre extrémité
+
+        synonyms.forEach(synonym => {
+            if (!baseNodeIds.has(synonym)) {  // ✅ Ne garder que les synonymes **absents** de A
+                newNodes.add(synonym);		
+            }
+        });
+    });
+    //console.log(`📌 Synonymes uniques ajoutés (B - A) :`, newNodes.size);
+    // ✅ Ajouter les nouvelles arêtes entre les synonymes et les nœuds initiaux
+    storedGraphEncours.edges.forEach(edge => {
+        if (
+            (baseNodeIds.has(edge.source) && newNodes.has(edge.target)) ||
+            (baseNodeIds.has(edge.target) && newNodes.has(edge.source))
+        ) {
+            newEdges.push(edge); // ✅ Ajoute uniquement les arêtes valides
+        }
+    });
+    //console.log(`📌 Nouvelles arêtes ajoutées :`, newEdges.length/2);
+    // ✅ Générer le graphe étendu
+    let extendedGraph = {
+        nodes: [...baseNodes], // 🔹 On commence avec A
+        edges: [...baseEdges, ...newEdges] // 🔹 On ajoute les nouvelles arêtes
+    };
+    // ✅ Ajouter les nouveaux synonymes au graphe avec une couleur différente
+    newNodes.forEach(synonym => {
+        let originalNode = storedGraphEncours.nodes.find(n => n.id === synonym);
+        if (!originalNode) return;		
+        // 🔹 Ajouter les coordonnées du nœud s'il existe dans `storedGraphEncours`
+        extendedGraph.nodes.push({
+            id: synonym,
+            label: originalNode.label ,
+			"nombre de synonymes": originalNode["nombre de synonymes"], 
+			synonymes: originalNode["synonymes"],
+            color: "#70db92", // 🎨 Couleur spéciale pour les synonymes (violet)
+            size: 1  , // 📌 Taille plus petite pas pris en compte
+            x: originalNode.x || Math.random() * 100, // 🔄 Position aléatoire si absente
+            y: originalNode.y || Math.random() * 100
+        });
+    });
+    // ✅ Afficher le nouveau graphe étendu
+		displayGraph (extendedGraph, { rescale: false ,  showEdges: false });  //showEdges: false sans afficher les liens
+		 
+		setTimeout(() => {
+			startForceAtlas2(extendedGraph,100);	
+			const camera = s.camera;
+			const zoomRatio = 0.8; // >1 pour zoomer, <1 pour dézoomer
+			camera.goTo({
+				ratio: camera.ratio / zoomRatio  
+				});	
+		}, 200); // petit délai pour garantir que s est prêt	
+updateTitreGraph("Graphe extension, sans liens");		
+}
+
+}		 
+///////FIN EXTENSION ajout des syno aux mots du graphe affiché	///////////////
+
+////   MATRICE BINAIRE
+document.getElementById("export-matrix-btn").addEventListener("click", function () {
+ 
+  // Récupérer les nœuds et arêtes du graphe affiché
+    const nodes = s.graph.nodes();
+    const edges = s.graph.edges();
+	LancerMatriceBinaire(nodes, edges) ;
+});
+
+function LancerMatriceBinaire(nodes, edges) {
+//  Vérifier si un graphe est affiché  
+	if (!lastGraphDisplayed || !lastGraphDisplayed.nodes || lastGraphDisplayed.nodes.length === 0) {
+		showNotification("❌ Aucun graphe affiché, calcul matrice impossible. ");
+        return;
+    }
+// verifier si les liens sont affichés
+	if (!lastGraphOptions.showEdges) {
+showNotification(" Le graphe affiché ne contient pas de liens entre les mots, calcul de la matrice annulé.");
+return;
+}
+if (nodes.length > 100) {
+    demanderConfirmation(`⚠️ Le graphe contient ${nodes.length} mots. Le calcul va être long. Voulez-vous l'effectuer ?`, function(reponse)
+	{
+      if (reponse) {
+        const matricebinaire = CalculateMatriceBinaire(nodes, edges);
+		} else {
+        showNotification(" Calcul de la matrice annulé.");
+		}
+    });
+  } else
+	{
+	 showNotification("Calcul de la matrice de synonymie en cours, patientez.");     
+		setTimeout(() => {   // ✅ Petit délai pour que le DOM soit bien mis à jour
+		const matricebinaire = CalculateMatriceBinaire(nodes, edges);
+		}, 100);
+	}
+	
+function CalculateMatriceBinaire(nodes,edges) {  
+		 	 
+	const synonymEdges = s.graph.edges();
+
+	const synonymMap = new Map();
+	synonymEdges.forEach(e => {
+    const a = e.source;
+    const b = e.target;
+    if (!synonymMap.has(a)) synonymMap.set(a, new Set());
+    if (!synonymMap.has(b)) synonymMap.set(b, new Set());
+    synonymMap.get(a).add(b);
+    synonymMap.get(b).add(a);
+  });
+	//console.log("📌 synonymMap :", synonymMap);
+	//console.log("📌 Noeuds avec plus de 0 synonymes :", Array.from(synonymMap.entries()).filter(([_, v]) => v.size > 0));
+
+  // ▶️ Ne garder que les adjectifs avec plus de 0 synonymes
+  const adjectifs = Array.from(synonymMap.entries())
+    .filter(([_, voisins]) => voisins.size > 0)
+    .map(([mot]) => mot)
+    .sort();
+
+  // ▶️ Matrice binaire
+  const matrice = adjectifs.map(a1 =>
+    adjectifs.map(a2 => synonymMap.get(a1)?.has(a2) ? 1 : 0)
+  );
+  
+const idToLabel = new Map();
+s.graph.nodes().forEach(n => idToLabel.set(n.id, n.label || n.id));
+
+let csv = 'mot,' + adjectifs.map(id => idToLabel.get(id)).join(',') + '\n';
+
+adjectifs.forEach((mot, i) => {
+  csv += [idToLabel.get(mot), ...matrice[i]].join(',') + '\n';
+});
+
+  // ▶️ Télécharger le fichier CSV
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'matrice_synonymes_filtrée.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+
+  showNotif("✅ Matrice de synonymie exportée. Fichier CSV dans votre dossier de Téléchargement.");
+};
+ }
+ ////  FIN MATRICE BINAIRE
+
+
+////MATRICE DES DISTANCES
+document.getElementById("export-path-btn").addEventListener("click",function () {
+
+// Récupérer les nœuds et arêtes du graphe affiché
+    const nodes = s.graph.nodes();
+    const edges = s.graph.edges();
+	LancerMatriceDistances(nodes, edges) ;
+});
+
+document.getElementById("stop-matrix-btn").addEventListener("click", () => {
+    if (calculInProgress) {
+        stopMatriceCalcul = true;
+        showNotification("❌ Annulation demandée, patientez...");
+    }
+});
+
+
+
+function LancerMatriceDistances(nodes, edges) {
+	//  Vérifier si un graphe est affiché  
+	if (!lastGraphDisplayed || !lastGraphDisplayed.nodes || lastGraphDisplayed.nodes.length === 0) {
+		showNotification("❌ Aucun graphe affiché, calcul matrice impossible. ");
+        return;
+    }
+	// verifier si les liens sont affichés
+	if (!lastGraphOptions.showEdges) {
+	showNotification(" Le graphe affiché ne contient pas de liens entre les mots, calcul de la matrice annulé.");
+	return;
+	}
+	
+if (nodes.length > 2) {
+    demanderConfirmation(`⚠️ Le graphe contient ${nodes.length} mots. LE CALCUL EST TRÈS LONG si plus de 10 mots ! Voulez-vous l'effectuer ?`, function(reponse)
+	{
+      if (reponse) {
+	  
+		stopMatriceCalcul = false; // ✅ Réinitialisation à chaque lancement
+		 calculInProgress = true;
+		document.getElementById("stop-matrix-btn").style.display = "inline"; // ✅ Affiche le bouton annulation
+	  
+		showNotification("Calcul de la matrice des distances en cours, patientez, ce calcul peut être très long.");     
+		setTimeout(() => {   // ✅ Petit délai pour que le DOM soit bien mis à jour
+		
+const start = Date.now();
+console.log(new Date().toLocaleTimeString(), "🚀 Début du process");
+// ... ton process
+		CalculateMatriceDistancesDecoupee(nodes, edges, () => {
+            const end = Date.now();
+            const durationSec = Math.round((end - start) / 1000);
+            console.log(new Date().toLocaleTimeString(), `✅ Calcul terminé en ${durationSec} secondes`);
+            calculInProgress = false;
+            document.getElementById("stop-matrix-btn").style.display = "none";
+        });
+						
+						}, 100);
+		} else {
+        showNotification(" Calcul de la matrice annulé.");
+		}
+    });
+  } else  // si on a 2 points seulement
+	{
+	 showNotification("Calcul de la matrice des distances en cours, patientez, ce calcul peut être long.");     
+		setTimeout(() => {   // ✅ Petit délai pour que le DOM soit bien mis à jour
+		const matricedistances = CalculateMatriceDistances(nodes, edges);
+		}, 100);
+	}
+	
+function CalculateMatriceDistancesDecoupee(nodes, edges, callback) {
+    const nodesAffiches = s.graph.nodes();
+    const nodeIdsAffiches = nodesAffiches.map(n => n.id);
+
+    const fullGraph = {};
+    storedGraphComplet.nodes.forEach(n => {
+        fullGraph[n.id] = [];
+    });
+    storedGraphComplet.edges.forEach(edge => {
+        fullGraph[edge.source].push(edge.target);
+        fullGraph[edge.target].push(edge.source);
+    });
+
+   function calculDistancesDepuis(sourceId, targetIdsSet) {
+    const distances = {};
+    const visited = new Set();
+    const queue = [[sourceId, 0]];
+
+    // Créer un set mutable des cibles restantes
+    const remainingTargets = new Set(targetIdsSet);
+    remainingTargets.delete(sourceId); // on l'enlève si présent
+
+    while (queue.length > 0) {
+        const [current, dist] = queue.shift();
+        if (visited.has(current)) continue;
+        visited.add(current);
+        distances[current] = dist;
+
+        // Si ce nœud est une cible affichée, on le retire des cibles restantes
+        if (remainingTargets.has(current)) {
+            remainingTargets.delete(current);
+            // ✅ Si toutes les cibles ont été atteintes ➔ arrêt anticipé
+            if (remainingTargets.size === 0) break;
+        }
+
+        for (let neighbor of fullGraph[current]) {
+            if (!visited.has(neighbor)) {
+                queue.push([neighbor, dist + 1]);
+            }
+        }
+    }
+    return distances;
+}
+
+
+    const distances = {};
+    nodeIdsAffiches.forEach(id => distances[id] = {});
+    const idToLabel = {};
+    s.graph.nodes().forEach(n => { idToLabel[n.id] = n.label; });
+
+    let i = 0;
+
+    function processNext() {
+        if (stopMatriceCalcul) {
+            showNotification("❌ Calcul annulé par l'utilisateur.");
+            console.warn("❌ Calcul interrompu par l'utilisateur.");
+            calculInProgress = false;
+            document.getElementById("stop-matrix-btn").style.display = "none";
+            stopMatriceCalcul = false;
+            return;
+        }
+
+        if (i >= nodeIdsAffiches.length) {
+            console.log("✅ Calcul complet terminé.");
+            exportMatriceCSV(distances, nodeIdsAffiches, idToLabel);
+            showNotification("✅ Matrice calculée et exportée.");
+            callback();
+            return;
+        }
+
+        const id_i = nodeIdsAffiches[i];
+        console.log(`🔹 Calcul des distances depuis ${id_i} (${i+1}/${nodeIdsAffiches.length})`);
+        const distsFrom_i = calculDistancesDepuis(id_i, new Set(nodeIdsAffiches));
+
+
+        for (let j = i; j < nodeIdsAffiches.length; j++) {
+            const id_j = nodeIdsAffiches[j];
+            const dist = distsFrom_i[id_j] !== undefined ? distsFrom_i[id_j] : -1;
+            distances[id_i][id_j] = dist;
+            distances[id_j][id_i] = dist;
+        }
+
+        i++;
+        setTimeout(processNext, 0); // Libère l'UI à chaque étape
+    }
+
+    processNext();
+}
+
+function exportMatriceCSV(distances, nodeIdsAffiches, idToLabel) {
+    let csv = "Label," + nodeIdsAffiches.map(id => `"${idToLabel[id]}"`).join(",") + "\n";
+    nodeIdsAffiches.forEach(i => {
+        csv += `"${idToLabel[i]}",` +
+            nodeIdsAffiches.map(j => {
+                if (i === j) return 0;
+                return distances[i][j] !== undefined ? distances[i][j] : -1;
+            }).join(",") + "\n";
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "matrice_distances.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+}
+
+//// FIN MATRICE DES DISTANCES
+
+<!-- FIN DES BOUTONS COLONNE GAUCHE DE LA PAGE  -->	
+	
+
+
+<!-- BOUTONS COLONNE DROITE DE LA PAGE -->
+
+// STOCK CUMUL IMPORT EXPORT 
+
+// Fonction pour STOCKER ET AFFICHER UN GRAPHE en remplacement de celui stocké précédemment
+	//copie du graphe affiché 
+	function storeGraph(graph) 
+	{
+		let nodes = typeof graph.nodes === "function" ? graph.nodes() : Object.values(graph.nodes);
+		let edges = typeof graph.edges === "function" ? graph.edges() : Object.values(graph.edges);
+		//console.log("📌 Vérification des attributs des nœuds AVANT stockage :", nodes);
+
+ // Filtrer pour ne garder que les visibles
+    nodes = nodes.filter(node => !node.hidden);
+    edges = edges.filter(edge => !edge.hidden);
+
+		return {
+        nodes: nodes.map(node => ({
+            id: node.id,
+            label: node.label,
+            x: node.x,
+            y: node.y,
+            size: node.size,
+            color: node.color,
+			catgram: node.catgram || [], 
+            antonymes: node.antonymes || [],   
+            variantes: node.variantes || [],
+            cliques: node.cliques || [],
+            "nombre de synonymes": node["nombre de synonymes"] || 0,   
+            "synonymes": node.synonymes || [],  
+				//liste10: node.liste10 || []      // NE PAS  Conserver les listes
+			})),
+        edges: edges.map(edge => ({
+            id: edge.id,
+            source: edge.source,
+            target: edge.target,
+            size: edge.size,
+            color: edge.color
+			}))
+		};
+	}
+// gestion du bouton "STOKER le graphe affiché "
+	document.getElementById("store-graph-en-0").addEventListener("click", function() {
+	
+	if (!lastGraphDisplayed || !lastGraphDisplayed.nodes || lastGraphDisplayed.nodes.length === 0) {
+		showNotification("❌ Aucun graphe affiché.");
+        return;
+    }
+	
+    if (s.graph.nodes().length > 0) {
+        storedGraph0 = storeGraph(s.graph);
+        //console.log("✅ Graphe affiché stocké par l'utilisateur :", storedGraph0);
+		showNotification('✅ Graphe stocké');
+    } else {
+        console.warn(" ❌Impossible de stocker : aucun nœud dans le graphe.");
+    }
+});
+// gestion du bouton "AFFICHER le graphe STOCKÉ "
+    document.getElementById('show-stored-graph0').addEventListener('click', function() {
+		if (storedGraph0 && storedGraph0.nodes.length > 0 && storedGraph0.edges.length > 0) { 
+		displayGraph(storedGraph0);
+		isAdjacency = false ;
+		updateTitreGraph("Affichage du graphe stocké");
+		} else {
+			showNotification('❌ Pas de graphe stocké');
+		}
+	});	
+////////////// Fin de la fonction pour stocker et afficher un graphe
+
+///////////////CUMUL DES GRAPHES//////////////////////////////////
+	document.getElementById("store-graph-en-1").addEventListener("click", function() {
+    
+	if (!lastGraphDisplayed || !lastGraphDisplayed.nodes || lastGraphDisplayed.nodes.length === 0) {
+		showNotification("❌ Aucun graphe affiché.");
+        return;
+    }
+	
+	if (s.graph.nodes().length > 0) {
+        let newGraph = storeGraph(s.graph);  // ✅ Graphe actuel
+
+        if (!storedGraph1 || !storedGraph1.nodes) {  
+            storedGraph1 = newGraph;  // ✅ Premier graphe stocké normalement
+			showNotification ("✅ Premier graphe ajouté au CUMUL");
+        } else {
+            // ✅ Vérifier si le graphe actuel est réellement différent avant d'ajouter
+            let existingNodes = new Map(storedGraph1.nodes.map(node => [node.id, node])); 
+            let existingEdges = new Map(storedGraph1.edges.map(edge => [edge.id, edge])); 
+            let isNewGraph = false;
+
+            newGraph.nodes.forEach(node => {
+                if (!existingNodes.has(node.id)) {
+                    existingNodes.set(node.id, node);
+                    isNewGraph = true;
+                }
+            });
+            newGraph.edges.forEach(edge => {
+                if (!existingEdges.has(edge.id)) {
+                    existingEdges.set(edge.id, edge);
+                    isNewGraph = true;
+                }
+            });
+            if (isNewGraph) {
+                storedGraph1 = {
+                    nodes: Array.from(existingNodes.values()),
+                    edges: Array.from(existingEdges.values())
+                };
+                showNotification("✅ Nouveau graphe ajouté au CUMUL");
+            } else {
+                showNotification("⚠️ Aucun changement dans la composition des motss et arêtes détecté dans le graphe, stockage ignoré.");
+            }
+        }
+    } else {
+        console.warn("⚠️ Impossible de stocker : aucun mot dans le graphe.");
+    }
+});
+//  FIN  gestion du bouton "stoker le graphe affiché en 1" CUMUL DES GRAPHES
+
+// SOUSTRACTION DU GRAPHE AFFICHÉ DU CUMUL /////////
+document.getElementById("subtract-graph-en-1").addEventListener("click", function () {
+    if (!storedGraph1 || !storedGraph1.nodes || storedGraph1.nodes.length === 0) {
+        showNotification("❌ Aucun graphe CUMULÉ à modifier !");
+        return;
+    }
+    if (!s || s.graph.nodes().length === 0) {
+        showNotification("❌ Aucun graphe affiché à soustraire !");
+        return;
+    }
+    const displayedNodeIds = new Set(s.graph.nodes().map(node => node.id));
+    // Supprimer les nœuds affichés du cumul
+    const remainingNodes = storedGraph1.nodes.filter(node => !displayedNodeIds.has(node.id));
+    // Supprimer les arêtes qui touchent un nœud supprimé
+    const remainingNodeIds = new Set(remainingNodes.map(node => node.id));
+    const remainingEdges = storedGraph1.edges.filter(edge =>
+        remainingNodeIds.has(edge.source) && remainingNodeIds.has(edge.target)
+    );
+    // Mettre à jour le CUMUL
+    storedGraph1 = {
+        nodes: remainingNodes,
+        edges: remainingEdges
+    };
+    //console.log("📌 Graphe affiché retiré du CUMUL. Nœuds restants :", remainingNodes.length);
+    showNotification("✅ Le graphe affiché a été retiré du CUMUL.");
+});
+// FIN SOUSTRACTION DU GRAPHE AFFICHÉ DU CUMUL /////////
+
+// VIDER LE CUMUL DES GRAPHES
+	document.getElementById("reset-stored-graph-1").addEventListener("click", function()
+	{
+			if (storedGraph1 && storedGraph1.nodes.length > 0 && storedGraph1.edges.length > 0) 
+			{	
+				storedGraph1 = { nodes: [], edges: [] };  // ✅ Réinitialisation complète
+				//console.log("✅ Graphe stocké dans le cuml réinitialisé :", storedGraph1);
+				if (s) {
+				s.graph.clear();  // ✅ Effacer l'affichage du graphe
+				s.refresh();  // ✅ Rafraîchir Sigma.js
+			}
+			showNotification("✅ Le cumul des graphes stockés a été éffacé !");			
+			}
+			else
+			{
+			showNotification('❌ Pas de graphe stocké');	
+			};
+	});
+// FIN VIDER LE CUMUL DES GRAPHES//////////
+
+// AFFICHER LE CUMUL  "Afficher le(s) Graphe(s) Stocké(s) en 1" 
+    document.getElementById('show-stored-graph1').addEventListener('click', function()
+		{
+		if (storedGraph1 && storedGraph1.nodes.length > 0 && storedGraph1.edges.length > 0) { 
+		displayGraph(storedGraph1);
+		isAdjacency = false ;
+		updateTitreGraph("Affichage du cumul");
+		} else {
+			showNotification('❌ Pas de graphe stocké');
+		}
+	});
+/////// FIN AFFICHER LE CUMUL ///	
+
+////////////// fonction pour EXPORTER un graphe   
+document.getElementById("export-graph").addEventListener("click", function() {
+    if (!s) {
+        showNotification("❌ Aucun graphe à exporter !");
+        return;
+    }	
+	// ✅ Récupérer les nœuds et arêtes du graphe affiché
+    let graphData = {
+        nodes: s.graph.nodes().map(node => ({
+            id: node.id,
+            label: node.label,
+            x: node.x,
+            y: node.y,
+            size: node.size,
+            color: node.color,
+			synonymes: node.synonymes || [],
+			["nombre de synonymes"]: node["nombre de synonymes"],
+            antonymes: node.antonymes || [],
+            variantes: node.variantes || [],
+            cliques: node.cliques || [],
+            //liste10: node.liste10 || []
+        })),
+        edges: s.graph.edges().map(edge => ({
+            id: edge.id,
+            source: edge.source,
+            target: edge.target,
+            size: edge.size,
+            color: edge.color
+        }))
+    };
+    // ✅ Convertir en JSON
+    let jsonString = JSON.stringify(graphData, null, 4);
+
+    // ✅ Créer un blob et un lien de téléchargement
+    let blob = new Blob([jsonString], { type: "application/json" });
+    let a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    //a.download = "graphe_export.json";  // 📌 Nom du fichier exporté
+	let fileName = prompt("Nom pour le fichier exporté, au format JSON, dans le dossier : Téléchargement", "graphe_export.json");
+	if (!fileName) return;  // utilisateur a annulé
+	a.download = fileName.endsWith(".json") ? fileName : fileName + ".json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    //console.log("✅ Exportation réussie !");
+});
+////////////// FIN fonction pour EXPORTER un graphe   
+
+////////// fonction pour IMPORTER un graphe
+// 📌 Quand on clique sur le bouton, déclencher l'ouverture du sélecteur de fichier
+document.getElementById("import-graph").addEventListener("click", () => {
+    document.getElementById("import-file").click();
+});
+// 📌 Gérer la sélection d’un fichier JSON
+document.getElementById("import-file").addEventListener("change", function (event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            const importedGraph = JSON.parse(e.target.result);
+			
+			// ✅ Détecter si c’est un graphe réduit
+      typeDeGraphe = importedGraph.type === "reduit" ? "reduit"  : "standard";
+	  if (typeDeGraphe === "reduit") {
+        showNotification("✅ Fichier importé de type réduit (avec clusters).");	
+}  
+      if (!importedGraph.nodes || !importedGraph.edges) {
+        showNotification("Le fichier n’est pas un graphe JSON valide.");
+        return;
+      }
+           console.log("📥 Graphe importé :", importedGraph);
+
+            // ✅ Afficher le graphe importé (fonction existante)
+			displayGraph(importedGraph);
+			 
+				startForceAtlas2(s); 
+			//console.log("✅ Import terminé :", importedGraph.nodes.length, "nœuds,", importedGraph.edges.length, "arêtes");
+			//s.graph.nodes().forEach(n => console.log(n.id, n.x, n.y, n.size));
+
+			s.refresh(); // ✅ Forcer le rafraîchissement
+        } catch (err) {
+            console.error("❌ Erreur lors de la lecture du fichier JSON :", err);
+            showNotification("Erreur lors de l’import du fichier JSON.");
+        }
+    };
+    reader.readAsText(file);
+});
+////////// FIN fonction pour IMPORTER un graphe
+
+/////////////fontion pour EXPORTER LA LISTE DES LABELS ///////////////////
+document.getElementById("export-label").addEventListener("click", function () {
+    if (!s || s.graph.nodes().length === 0) {
+        alert("❌ Aucun graphe affiché !");
+        return;
+    }
+
+    // 1. Récupérer les labels
+    let labels = s.graph.nodes().map(node => node.label);
+
+    // 2. Trier les labels par ordre alphabétique
+    labels.sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+
+    // 3. Construire le contenu CSV (une ligne, séparée par des virgules)
+   //mots séparés par une ,
+   const csvContent = labels.join(","); 
+   //labels.join("\n") un mot par ligne
+
+    // 4. Demander le nom du fichier à l'utilisateur
+    const fileName = prompt("Nom du fichier CSV à enregistrer dans le dossier : téléchargement  ", "mots_du_graphe.csv");
+    if (!fileName) return;
+
+    // 5. Créer et déclencher le téléchargement
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName.endsWith(".csv") ? fileName : fileName + ".csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    //console.log("✅ Labels exportés :", labels.length);
+});
+/////////////FIN fontion pour EXPORTER LA LISTE DES LABELS ///////////////////
+
+
+/////EXPORT DU GRAPHE AFFICHE EN PDF
+function exportGraphToPDF() {
+  const container = document.getElementById('graph-container');
+
+  html2canvas(container).then(canvas => {
+    const imgData = canvas.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({
+      orientation: 'landscape',
+      unit: 'pt',
+      format: [canvas.width, canvas.height]
+    });
+    pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+    pdf.save("graphe.pdf");
+  });
+}
+/////FIN EXPORT DU GRAPHE AFFICHE EN PDF
+// FIN STOCK CUMUL IMPORT EXPORT ///////////////////////
+	
+/////// COMPOSANTES CONNEXES //////////////////////////////////////	
+// ✅ Génère une couleur unique pour chaque composante
+function getColor(index) {
+    const colors = [
+        "#e74c3c", "#3498db", "#2ecc71", "#f1c40f", "#9b59b6", 
+        "#1abc9c", "#e67e22", "#d35400", "#34495e", "#95a5a6"
+    ];
+    return colors[index % colors.length]; // ✅ Réutilise les mêmes couleurs pour chaque composante
+}
+///////////bouton composantes connexes  
+document.getElementById("show-connected-components-btn").addEventListener("click", function() {
+    detectConnectedComponents();
+});
+//////////calcul des composantes CONNEXES
+function detectConnectedComponents() {
+  
+  if (isFirstComponentDetection) {  
+        baseGraphForComponents = {  // ✅ Stocke le graphe affiché au premier appel seulement
+            nodes: [...s.graph.nodes()],  
+            edges: [...s.graph.edges()]
+        };
+        isFirstComponentDetection = false;  // ✅ Désactive le stockage pour les appels suivants
+    }
+	else 
+	{ 						//	displayGraph (coloredGraph );
+	}
+
+   // let nodes = baseGraphForComponents.nodes;  // ✅ Toujours utiliser le même graphe de référence
+   // let edges = baseGraphForComponents.edges;
+
+  let nodes = s.graph.nodes();  // ✅ Toujours utiliser le graphe AFFICHÉ
+  let edges = s.graph.edges();
+    //console.log("📌 Utilisation du graphe affiché pour les composantes :", nodes.length, "nœuds,", edges.length/2, "arêtes");
+ 
+	//  Vérifier si un graphe est affiché  
+	if (!lastGraphDisplayed || !lastGraphDisplayed.nodes || lastGraphDisplayed.nodes.length === 0) {
+		showNotification("❌ Aucun graphe affiché, calcul des connexes impossible. ");
+        return;
+    }
+	// verifier si les liens sont affichés
+	if (!lastGraphOptions.showEdges) {
+	showNotification(" Le graphe affiché ne contient pas de liens entre les mots, calcul des connexes annulé.");
+	return;
+	}
+
+    // ✅ Construire la liste d'adjacence
+    let adjacencyList = {};
+    nodes.forEach(node => adjacencyList[node.id] = []);
+    
+    edges.forEach(edge => {
+        adjacencyList[edge.source].push(edge.target);
+        adjacencyList[edge.target].push(edge.source);
+    });
+
+    // ✅ Détection des composantes connexes via DFS
+    let visited = new Set();
+    connectedComponents = [];  // ✅ Réinitialise la liste des composantes
+
+    function dfsIterative(startNodeId, component) {
+    let stack = [startNodeId];
+    visited.add(startNodeId);
+
+    while (stack.length > 0) {
+        let nodeId = stack.pop();
+        component.push(nodeId);
+
+        adjacencyList[nodeId].forEach(neighbor => {
+            if (!visited.has(neighbor)) {
+                visited.add(neighbor);
+                stack.push(neighbor);
+            }
+        });
+    }
+}
+    nodes.forEach(node => {
+    if (!visited.has(node.id)) {
+        let component = [];
+        dfsIterative(node.id, component);
+        connectedComponents.push(component);
+    }
+});
+
+// Trier les composantes par taille décroissante
+connectedComponents.sort((a, b) => b.length - a.length);
+
+// Garder les 20 plus grandes
+let topComponents = connectedComponents.slice(0, 20);
+
+let allowedNodeIds = new Set(topComponents.flat());
+
+let filteredNodes = nodes.filter(node => allowedNodeIds.has(node.id));
+let filteredEdges = edges.filter(edge => allowedNodeIds.has(edge.source) && allowedNodeIds.has(edge.target));
+
+// Rapport en notification
+let message = `Nombre total de composantes : ${connectedComponents.length}<br>`;
+connectedComponents.forEach((comp, index) => {
+    message += `Composante ${index + 1} : ${comp.length} mots<br>`;
+});
+
+// ⚠️ Vider le graphe actuel
+s.graph.clear();
+
+// ✅ Ajouter les nœuds filtrés
+filteredNodes.forEach(node => s.graph.addNode(node));
+
+// ✅ Ajouter les arêtes filtrées
+filteredEdges.forEach(edge => s.graph.addEdge(edge));
+
+    // ✅ Appliquer une couleur différente à chaque composante connexe
+	topComponents.forEach((component, index) => {
+    let color = getColor(index);  // ✅ Utilise la même fonction que la légende
+    component.forEach(nodeId => {
+        let node = s.graph.nodes(nodeId);
+        if (node) node.color = color;
+    });
+});
+
+    // ✅ Sauvegarde le graphe coloré pour pouvoir le réafficher plus tard
+    coloredGraph = { nodes: [...s.graph.nodes()], edges: [...s.graph.edges()] };
+	//console.log("📌 Composantes connexes détectées :", connectedComponents);
+    // ✅ Rafraîchir l'affichage pour voir toutes les composantes colorées
+    s.refresh();
+	updateConnectedComponentsUI(topComponents);
+	
+//////////APPEL DE LA LEGENDE
+
+// ✅ Mise à jour complète de la légende avant l'affichage
+	updateConnectedComponentsUI(topComponents);
+// ✅ Forcer l'affichage de la légende après le calcul des composantes
+	setTimeout(() => {
+	let legendContainer = document.getElementById("connected-components-legend");
+	if (legendContainer) {
+    legendContainer.style.display = "block"; // ✅ Assure que la légende est visible
+	}
+	}, 100); // ✅ Petit délai pour que le DOM soit bien mis à jour
+
+}
+//////////FIN calcul des composantes CONNEXES
+
+///fonction pour avoir des couleurs
+function getColor(index) {
+    const colors = [
+        "#3498db", "#e74c3c", "#2ecc71", "#f1c40f", "#9b59b6",
+        "#1abc9c", "#e67e22", "#d35400", "#34495e", "#95a5a6"
+    ];
+    return colors[index % colors.length]; // ✅ Assigne une couleur parmi la liste
+}
+
+///////////creation dynamique des boutons de CONNEXES
+function updateConnectedComponentsUI(components) {
+
+	let legendContainer = document.getElementById("connected-components-legend");
+
+   // ✅ Afficher la légende
+    legendContainer.style.display = "block";
+
+    let legendItemsContainer = document.getElementById("connected-components-legend");
+	if (legendContainer) {
+    legendContainer.style.display = "block"; // ✅ La légende s'affiche dès le premier clic
+	 legendContainer.innerHTML = "<h3>Composantes connexes</h3> <div id='legend-items'></div>";
+}
+
+    components.forEach((component, index) => {
+        let color = getColor(index); // 🎨 Fonction qui génère une couleur pour chaque composante
+		let nodeCount = component.length; // ✅ Récupère le nombre de nœuds dans la composante
+
+        // ✅ Création d'une pastille de couleur
+        let legendItem = document.createElement("div");
+        legendItem.classList.add("legend-item");
+        legendItem.innerHTML = `
+            <span class="color-dot" style="background-color: ${color};"></span>
+            <span class="legend-label">C ${index + 1} (${nodeCount})</span> <!-- ✅ Ajoute le nombre de nœuds -->
+        `;
+
+		// ✅ Ajuste dynamiquement le nombre de colonnes en fonction du nombre de pastilles
+		legendItemsContainer.style.columnCount = Math.ceil(components.length / 15); 	//titi
+
+        // ✅ Ajoute un événement au clic
+        legendItem.addEventListener("click", function () {
+           // console.log(`📌 Affichage de la composante ${index + 1} avec ${nodeCount} nœuds`);
+            displayComponentGraph(index, components);
+        });
+
+        legendItemsContainer.appendChild(legendItem);
+    });
+
+    // ✅ Ajouter un bouton pour afficher toutes les composantes
+    let showAllButton = document.createElement("button");
+    showAllButton.textContent = "TOUTES";
+    showAllButton.style.marginTop = "10px";
+    showAllButton.style.backgroundColor = "#3498db";  // Bleu Sigma.js
+    showAllButton.style.color = "white";
+    showAllButton.style.border = "none";
+    showAllButton.style.padding = "8px";
+    showAllButton.style.borderRadius = "5px";
+    showAllButton.style.cursor = "pointer";
+    showAllButton.style.fontSize = "14px";
+    showAllButton.style.transition = "background 0.3s ease-in-out";
+
+    // ✅ Changement de couleur au survol
+    showAllButton.addEventListener("mouseover", function () {
+        showAllButton.style.backgroundColor = "#2980b9"; // Bleu foncé
+    });
+    showAllButton.addEventListener("mouseout", function () {
+        showAllButton.style.backgroundColor = "#3498db"; // Bleu d'origine
+    });
+
+    // ✅ Ajoute l'événement de clic pour afficher toutes les composantes
+    showAllButton.addEventListener("click", function () {
+       // console.log("📌 Affichage de toutes les composantes");
+         
+		displayGraph(coloredGraph);
+		isAdjacency = false ;
+    });
+
+    // ✅ Ajouter le bouton au conteneur avant le bouton "Masquer"
+    legendContainer.appendChild(showAllButton);
+
+    // ✅ Ajouter un bouton pour masquer la legende des connexes
+    let hideButton = document.createElement("button");
+    hideButton.textContent = "Masquer";
+    hideButton.style.marginTop = "10px";
+    hideButton.style.backgroundColor = "#bdc3c7";  
+    hideButton.style.cursor = "pointer";
+	 
+	// Ajouter un gestionnaire d'événements pour changer la couleur au survol du bouton masquer
+	hideButton.addEventListener("mouseover", function() {
+    hideButton.style.backgroundColor = "#FF0000"; // Rouge
+	});
+	hideButton.addEventListener("mouseout", function() {
+    hideButton.style.backgroundColor = "#bdc3c7"; // Couleur d'origine
+	});
+
+    hideButton.addEventListener("click", function () {
+        legendContainer.style.display = "none";
+    });
+
+    legendContainer.appendChild(hideButton);
+}
+///////////FIN creation dynamique des boutons CONNEXES
+
+///////////////////affichage des CONNEXES
+function displayComponentGraph(index, components) {
+ 
+    let componentNodeIds = new Set(components[index]);
+
+    let subGraphNodes = coloredGraph.nodes.filter(node => componentNodeIds.has(node.id));
+
+	// ✅ Appliquer la couleur correcte à chaque nœud
+    let color = getColor(index);
+    subGraphNodes.forEach(node => {
+        node.color = color; // 🎨 Applique la couleur correspondant à la légende
+    });
+   
+   // ✅ Vérification des arêtes : Garde uniquement celles qui connectent les nœuds de la composante
+    let subGraphEdges = storedGraphEncours.edges.filter(edge =>
+        componentNodeIds.has(edge.source) && componentNodeIds.has(edge.target)
+    );
+	
+  //  console.log(`📌 Affichage de la composante ${index + 1}:`, subGraphNodes.length, "nœuds et", subGraphEdges.length/2, "arêtes");
+
+    let componentGraph = { nodes: subGraphNodes, edges: subGraphEdges };
+
+     //affiche les stats
+	   updateGraphStats(componentGraph );
+	      
+        // ✅ Effacer l'ancien graphe et recharger uniquement la composante sélectionnée
+        s.graph.clear();  // ✅ Efface complètement le graphe actuel
+        s.graph.read(componentGraph);  // ✅ Charge les nouveaux nœuds et arêtes
+        s.refresh();  // ✅ Rafraîchir l'affichage pour forcer Sigma.js à afficher les nouvelles données
+		isAdjacency = false ;
+		// ✅ Vérification des nœuds et arêtes après le chargement
+		// console.log("📌 Nœuds affichés :", s.graph.nodes().length);
+		// console.log("📌 Arêtes affichées :", s.graph.edges().length);
+		//console.log("✅ Composante affichée :", s.graph.nodes().length, "nœuds et", s.graph.edges().length, "arêtes");
+}
+///////////////////FIN affichage des connexes
+/////// FIN COMPOSANTES CONNEXES //////////////////////////////////////		
+	
+
+///////// FONCTION  calcul COMMUNAUTES SUR LE GRAPHE AFFICHÉ //////////
+function detectCommunitiesOnCurrentGraph() {
+    
+//  Vérifier si un graphe est affiché  
+  if (!lastGraphDisplayed || !lastGraphDisplayed.nodes || lastGraphDisplayed.nodes.length === 0) {
+		showNotification("❌ Aucun graphe affiché, calcul des communautés impossible. ");
+        return;
+    }
+	// verifier si les liens sont affichés
+	if (!lastGraphOptions.showEdges) {
+	showNotification(" ❌ Le graphe affiché ne contient pas de liens entre les mots, calcul des communautés annulé.");
+	return;
+	}
+	
+    //  Créer un graphe graphology à partir du graphe affiché
+    const graph = new graphology.Graph();
+    // Ajouter les nœuds
+    s.graph.nodes().forEach(node => {
+        graph.addNode(node.id, { label: node.label });
+    });
+    // Ajouter les arêtes
+    s.graph.edges().forEach(edge => {
+        if (graph.hasNode(edge.source) && graph.hasNode(edge.target)) {
+            graph.addEdge(edge.source, edge.target);
+        }
+    });
+	//console.log("📌 Vérification de graphology :", window.graphology); 
+	//console.log("📌 Vérification de graphology-communities-louvain :", window.graphologyCommunitiesLouvain);
+	//console.log("📌 Propriétés disponibles :", Object.keys(window.graphologyCommunitiesLouvain));
+	// Appliquer l'algorithme de Louvain  ///////////////////
+		window.graphologyCommunitiesLouvain.assign(graph ,{
+			resolution: 1,  // ✅ Augmente la sensibilité au regroupement
+			rng: Math.random, // ✅ Randomisation pour éviter les blocages
+		});  
+	///////////////////////////////////////////////////////////////////////
+	//  Vérifier après assign() que les communautés sont bien ajoutées dans graph
+	//console.log("📌 Communautés détectées A :", Object.fromEntries(s.graph.nodes().map(node => [node.id, node.community])));
+		//console.log("📌 Nombre de nœuds dans s.graph avant stockage :", s.graph.nodes().length);
+		//console.log("📌 Nombre d’arêtes dans s.graph avant stockage :", s.graph.edges().length);
+	//  Vérification détaillée
+	const communityData = window.graphologyCommunitiesLouvain.detailed(graph);
+	//console.log("📌 Détails des communautés :", communityData);
+	//  Récupérer les communautés depuis le graphe
+	const communities = {};
+	graph.forEachNode((node, attributes) => {
+    communities[node] = attributes.community;
+	});
+	//console.log("📌 Communautés détectées :", communities);
+    //  Ajouter la communauté comme attribut de chaque nœud pour Sigma.js
+    s.graph.nodes().forEach(node => {
+        node.community = communities[node.id] || 0;  //0 si non détecté
+    });
+    //  Assigner une couleur différente à chaque communauté
+    const colorPalette = [
+        "#e74c3c", "#3498db", "#2ecc71", "#f1c40f", "#9b59b6",
+        "#1abc9c", "#e67e22", "#95a5a6", "#34495e", "#8e44ad"
+    ];
+   s.graph.nodes().forEach(node => {
+       node.color = colorPalette[node.community % colorPalette.length] || "#bdc3c7";
+    });		 
+    //  Rafraîchir le graphe pour afficher les couleurs des communautés
+    s.refresh();
+	//  Stocker  le graphe avec les communautés et les couleurs dans  storedGraphLouvain
+		storedGraphLouvain = { 
+		nodes: [...s.graph.nodes()], 
+		edges: [...s.graph.edges()] 
+		};
+	window.graphologyCommunitiesLouvain.assign(graph );
+
+	updateCommunityLegend();  //  Mettre à jour la légende après assignation
+
+	//console.log("📌 Stockage dans storedGraphLouvain (après affectation des  communauté) effectué !", storedGraphLouvain);
+	//console.log("📌 Nœuds dans le graphe affiché :", s.graph.nodes().length);
+	//console.log("📌 Nœuds dans storedGraphLouvain :", storedGraphLouvain.nodes.length);
+	//console.log("📌 Arêtes dans storedGraphLouvain :", storedGraphLouvain.edges.length/2);
+	//console.log("📌 Vérification des attributs des nœuds dans storedGraphLouvain :",
+	// storedGraphLouvain.nodes.map(n => ({ id: n.id, community: n.community }))
+	//);
+	updateCommunityLegend();  //  Mettre à jour la légende après assignation
+
+	//s.graph.nodes().forEach(node => {
+	// if (node.community === 0) {
+	//     console.warn(`⚠️ Nœud classé 0 : ${node.id} (degré : ${s.graph.degree(node.id)})`);
+	// }
+	//});
+}
+// 📌 Associer la fonction au bouton "Communautés"
+document.getElementById("detect-communities").addEventListener("click", function() {
+    detectCommunitiesOnCurrentGraph();
+});
+
+/////////// gérer l’affichage du bouton et réafficher la légende 
+document.getElementById("show-legend-btn").addEventListener("click", function() {
+    let legendContainer = document.getElementById("community-legend");
+    legendContainer.style.display = "block";
+    this.style.display = "none"; //  Cacher le bouton après affichage
+});
+
+///////////////////////////////////////
+   function displayCommunity(communityId) {
+   // console.log(`📌 Affichage de la communauté ${communityId}`);
+
+    //  Vérifier que le graphe initial est bien stocké
+    if (!storedGraphLouvain) {
+        console.error("❌ ERREUR : le graphe n'est pas défini !");
+        return;
+    }
+	//console.log("📌 storedGraphLouvain avant filtrage des communautés " ,storedGraphLouvain );
+	//console.log("📌 attributs des nœuds dans storedGraphLouvain avant filtrage des communautés",
+     storedGraphLouvain.nodes.map(n => ({ id: n.id, community: n.community, color: n.color }));
+	//console.log(`📌 Type de communityId :`, typeof communityId, `Valeur :`, communityId);
+	//  Afficher un exemple de node pour voir son format exact
+	//console.log(`📌 Exemple de nœud dans storedGraphLouvain :`, storedGraphLouvain.nodes[0]);
+
+	communityId = Number(communityId); //  Convertit en nombre 
+	//  Utiliser le graphe initial pour FILTRER les communautés
+    let subGraphNodes = storedGraphLouvain.nodes.filter(node => node.community === communityId);
+    let nodeIds = new Set(subGraphNodes.map(n => n.id));  
+    console.log(" Nœuds sélectionnés :", subGraphNodes);
+    //  Filtrer les arêtes pour ne conserver que celles entre ces nœuds
+    let subGraphEdges = storedGraphLouvain.edges.filter(edge => 
+        nodeIds.has(edge.source) && nodeIds.has(edge.target)
+    );
+	console.log(`📌 Vérification des nœuds trouvés pour communauté ${communityId} :`,subGraphNodes.map(n => ({ id: n.id, community: n.community })));
+    //console.log(" Arêtes sélectionnées :", subGraphEdges);
+    //  Vérifier que des arêtes existent
+    if (subGraphEdges.length === 0) {
+        console.warn(`⚠️ Aucun edge trouvé pour la communauté ${communityId}`);
+    }
+	//  Trouver la couleur de la pastille associée à la communauté sélectionnée
+	let legendItems = document.querySelectorAll(".legend-item"); 
+	let color = communityColors[communityId] || "#3498db";
+	legendItems.forEach(item => {
+    let label = item.querySelector(".legend-label").textContent;
+    if (label.includes(`C${communityId} (`)) {
+        color = item.querySelector(".color-dot").style.backgroundColor;
+    }
+	//console.log(` Couleur détectée pour communauté ${communityId} :`, color);
+	//console.log(" Contenu exact des labels :", Array.from(legendItems).map(item =>
+	//item.querySelector(".legend-label").textContent
+});
+	//  Appliquer la couleur aux nœuds
+	subGraphNodes.forEach(node => {
+    node.color = color;
+	});
+		
+    let communityGraph = { nodes: subGraphNodes, edges: subGraphEdges };
+	// console.log(`📌 Graphe de la communauté ${communityId} généré :`, communityGraph);
+	//console.log(`📌 Couleur assignée à la communauté ${communityId}:`, color);
+	//console.log("📌 Nœuds colorés :", subGraphNodes.map(n => ({ id: n.id, color: n.color })));
+    //  Afficher uniquement cette communauté
+	//console.log(`📌 Affichage de la communauté ${communityId} (${subGraphNodes.length} nœuds)`);
+	
+	
+//////////////////////
+	if (subGraphNodes.length === 1 && subGraphEdges.length === 0) {
+  console.warn(`ℹ️ Communauté ${communityId} contient un seul mot sans arêtes.`);
+
+  let node = subGraphNodes[0];
+  node.x = 0;
+  node.y = 0;
+  node.size = 6;
+  node.color = color;
+
+  let soloGraph = { nodes: [node], edges: [] };
+
+  // ✅ Méthode directe à la manière de displayComponentGraph
+  s.graph.clear();
+  s.graph.read(soloGraph);
+  s.refresh();
+  isAdjacency = false;
+  return;
+}
+  else {
+	displayGraph(communityGraph);
+}
+	isAdjacency = false ;
+}
+
+//////////////////////////////////////// LEGENDE  COMMUNAUTÉS
+function updateCommunityLegend() {
+    let legendContainer = document.getElementById("community-legend");
+	let legendItemsContainer = document.getElementById("legend-items");
+	//legendItemsContainer.style.columnCount = Math.ceil(connectedComponents.length / 15); // ✅ Ajuste le nombre de colonnes
+	//  Afficher la légende lorsqu'on détecte les communautés
+    legendContainer.style.display = "block";
+    // Vider l'ancienne légende
+    legendContainer.innerHTML = "<h3>Communautés</h3><div id='community-items'></div>";
+    legendItemsContainer = document.getElementById("community-items");
+
+    //  Créer les pastilles pour chaque communauté
+    let communityCounts = {};  // 📌 Stocke la population de chaque communauté
+    storedGraphLouvain.nodes.forEach(node => {
+        let communityId = node.community;
+        if (!communityCounts[communityId]) communityCounts[communityId] = 0;
+        communityCounts[communityId]++;
+    });
+    Object.entries(communityCounts)
+    .sort((a, b) => b[1] - a[1])
+    .forEach(([communityId, count], index) => {
+         
+let color = getColor(index);
+communityColors[communityId] = color; // 🔥 enregistre la couleur
+        let legendItem = document.createElement("div");
+        legendItem.classList.add("legend-item");
+        legendItem.innerHTML = `
+            <span class="color-dot" style="background-color: ${color};"></span>
+            <span class="legend-label">C${communityId} (${count})</span>
+        `;
+        legendItem.addEventListener("click", function () {
+          //  console.log(`📌 Affichage de la communauté ${communityId} avec ${count} nœuds`);
+            displayCommunity(communityId);
+        });
+        legendItemsContainer.appendChild(legendItem);
+    });
+
+    //  Ajuste dynamiquement le nombre de colonnes
+    legendItemsContainer.style.columnCount = Math.ceil(Object.keys(communityCounts).length / 15);
+    //  Ajouter un bouton pour afficher toutes les communautés
+    let showAllButton = document.createElement("button");
+    showAllButton.textContent = "TOUTES";
+    showAllButton.classList.add("show-all-button");
+	
+	showAllButton.addEventListener("click", function () {
+       // console.log("📌 Affichage de toutes les communautés");
+        
+		 displayGraph(storedGraphLouvain);
+		 isAdjacency = false ;
+    });
+	
+	//  Ajouter un bouton pour masquer la légende des communautés
+    let hideButton = document.createElement("button");
+    hideButton.textContent = "Masquer";
+    hideButton.classList.add("hide-legend-button");
+
+    hideButton.addEventListener("click", function () {
+        legendContainer.style.display = "none"; //  Cache la légende lorsqu'on clique sur "Masquer"
+    });	
+    legendContainer.appendChild(showAllButton);
+	legendContainer.appendChild(hideButton);
+}
+///////// FIN FONCTION POUR APPLIQUER L'ALGORITHME DE LOUVAIN COMMUNAUTES SUR LE GRAPHE AFFICHÉ //////////
+	
+//  bouton pour alterner  DÉMARRER/ARRÊTER LA SPATIALISATION
+    document.getElementById('toggle-forceatlas2').addEventListener('click', function() {
+      if (isForceAtlas2Running) {
+        s.stopForceAtlas2();
+        this.textContent = 'Démarrer la spatialisation'; 
+		isForceAtlas2Running = false;
+	  // ✅ Annule le setTimeout si encore actif
+	 if (forceAtlasTimeout) {
+		clearTimeout(forceAtlasTimeout); // ✅ Annule le réaffichage automatique
+		forceAtlasTimeout = null;
+		}
+	} 
+	else
+	{
+    startForceAtlas2(s, 10000); // ou durée que tu souhaites
+    this.textContent = 'Arrêter la spatialisation';
+    isForceAtlas2Running = true;
+	}
+  });
+     
+//  FIN bouton pour alterner  DÉMARRER/ARRÊTER LA SPATIALISATION
+
+///////////GRAPHE de spatialisation des noeuds FORCEATLAS2 //////////////////
+////// appel par defaut duration = 0.6 seconde durée personnalisée  exemple 5 secondes  : startForceAtlas2(grapdata, 5000);
+function startForceAtlas2(data, duration = 600) {
+    s.graph.nodes().forEach(node => {
+        if (node.x === undefined || node.y === undefined) {
+            console.error(`⚠️ Problème de coordonnées pour le nœud ${node.id} (${node.label})`);
+        }
+    });
+    // repositionnement des nœuds avant calcul
+    s.graph.nodes().forEach(node => {
+        node.x = Math.random();
+        node.y = Math.random();
+    });
+	//lancement 
+    s.startForceAtlas2({
+        worker: true,
+        barnesHutOptimize: true,
+        barnesHutTheta: 0.5,
+        scalingRatio: 2,
+        gravity: 2
+    });
+    // Stockage du timeout pour pouvoir l’annuler plus tard
+  forceAtlasTimeout = setTimeout(() => {
+    if (s.isForceAtlas2Running()) {
+      s.stopForceAtlas2();
+      isForceAtlas2Running = false;
+
+      const btn = document.getElementById('toggle-forceatlas2');
+      if (btn) btn.textContent = 'Démarrer la spatialisation';
+    }
+
+    // Réutilisation des coordonnées courantes pour un affichage propre
+    let currentGraph = {
+      nodes: s.graph.nodes().map(n => ({ ...n })),
+      edges: s.graph.edges().map(e => ({ ...e }))
+    };
+
+    // Réaffichage du graphe avec les options précédentes (sans rescale violent)
+    //displayGraph(currentGraph, { ...lastDisplayOptions, rescale: 0.6 });
+
+    forceAtlasTimeout = null; // Libère le timeout
+	
+    }, duration);
+}	
+///////////FIN graphe de spatialisation FORCEATLAS2 //////////////////
+
+///// IMPORTER DES MOTS
+// ▶️ Quand on clique sur le bouton, on simule le clic du champ fichier
+document.getElementById("btn-importer-mots").addEventListener("click", () => {
+    document.getElementById("file-mots-import").click();
+});
+
+// ▶️ Quand un fichier est sélectionné
+document.getElementById("file-mots-import").addEventListener("change", function (e) {
+    const fichier = e.target.files[0];
+    if (!fichier) {
+        alert("❌ Aucun fichier sélectionné.");
+        return;
+    }
+    importerEtAfficherMotsDepuisCSV(fichier);
+    // ✅ Remettre le champ à vide pour autoriser le même fichier une prochaine fois
+    this.value = null;
+});
+
+function importerEtAfficherMotsDepuisCSV(fichier) {
+    const reader = new FileReader();
+
+    reader.onload = function (e) {
+        const contenu = e.target.result.trim();
+        // 🔍 Extraire les mots importés
+        const motsImportés = contenu
+            .split(',')
+            .map(m => m.trim())
+            .filter(m => m.length > 0);
+        // ✅ Vérifications de format via le tableau
+        if (motsImportés.length === 0) {
+            alert("❌ Aucun mot valide détecté dans le fichier. Assurez-vous qu'il contient une seule ligne de mots séparés par des virgules.");
+            return;
+        }
+        // (optionnel) Vérifie s'il y a des sauts de ligne suspects
+        if (contenu.includes('\n')) {
+            alert("❌ Le fichier semble contenir plusieurs lignes. Seule une ligne de mots séparés par des virgules est attendue.");
+            return;
+        }
+        const nodesToShow = [];
+        const motsNonTrouvés = [];
+        const labelToNode = {};
+        storedGraphEncours.nodes.forEach(node => {
+            labelToNode[node.label] = node;
+        });
+        motsImportés.forEach(mot => {
+            const node = labelToNode[mot];
+            if (node) {
+                nodesToShow.push({ ...node });
+            } else {
+                motsNonTrouvés.push(mot);
+            }
+        });
+        if (nodesToShow.length === 0) {
+            alert("❌ Aucun mot trouvé dans le graphe.");
+            return;
+        }
+        const subgraph = {
+            nodes: nodesToShow,
+            edges: []
+        };
+        displayGraph(subgraph);
+        showNotification(`✅ ${nodesToShow.length} mot(s) affiché(s).`);
+        if (motsNonTrouvés.length > 0) {
+            alert("⚠️ Mots non trouvés dans le graphe :\n" + motsNonTrouvés.join(', '));
+        }
+    };
+    reader.readAsText(fichier);
+}
+///FIN IMPORTER DES MOTS
+
+<!-- FIN DES BOUTONS COLONNE DROITE DE LA PAGE -->
+
+/////////////////////// GESTION DES EVENEMENTS ////////////////////
+  
+// ✅ Fonction pour trouver le CHEMIN LE PLUS COURT entre deux mots dans le graphe
+function trouverChemin(graph, sourceLabel, targetLabel) {
+  const idLabelMap = {};
+  const labelIdMap = {};
+
+  graph.nodes.forEach(n => {
+    idLabelMap[n.id] = n.label;
+    labelIdMap[n.label] = n.id;
+  });
+  const sourceId = labelIdMap[sourceLabel];
+  const targetId = labelIdMap[targetLabel];
+  if (!sourceId || !targetId) return null;
+  const visited = new Set();
+  const queue = [[sourceId]];
+  while (queue.length > 0) {
+    const path = queue.shift();
+    const current = path[path.length - 1];
+    if (current === targetId) return path;
+    if (visited.has(current)) continue;
+    visited.add(current);
+    graph.edges.forEach(edge => {
+      if (edge.source === current && !visited.has(edge.target)) {
+        queue.push([...path, edge.target]);
+      } else if (edge.target === current && !visited.has(edge.source)) {
+        queue.push([...path, edge.source]);
+      }
+    });
+  }
+  return null;
+}
+// fin fonction pour trouver le CHEMIN LE PLUS COURT entre deux mots 
+ 
+let modeCheminActif = false;
+let selectedNode1 = null;
+let grapheAvantChemin = null;
+let surlignageActif = null;
+//BOUTON RECHERCHE CHEMIN
+document.getElementById("btn-mode-chemin").addEventListener("click", () => {
+
+if (!lastGraphDisplayed || !lastGraphDisplayed.nodes || lastGraphDisplayed.nodes.length === 0) {
+		showNotification("❌ Aucun graphe affiché, pas de chemin possible. ");
+        return;
+    }
+	else {	
+  modeCheminActif = true;
+  selectedNode1 = null;
+  document.getElementById("btn-mode-chemin").classList.add("active");
+  showNotification("Mode chemin activé : cliquez sur deux mots.");
+  console.log("modeCheminActif",modeCheminActif);
+  }
+});  
+  
+/////// Fonction pour gerer le CLIC GAUCHE sur les nœuds
+function ClicNodeEvents(s) {
+  s.unbind('clickNode');
+
+  s.bind('clickNode', function (e) {
+    const clickedNode = e.data.node;
+	//console.log("clickedNode", clickedNode);
+    //console.log("selectedNode1", selectedNode1);
+
+/////////////////////////////// ✅ MODE CHEMIN ACTIVÉ
+    if (modeCheminActif) {
+	
+      if (selectedNode1 && clickedNode && selectedNode1.id === clickedNode.id) {
+        showNotification("⚠️ Sélection annulée.");
+        selectedNode1 = null;
+        s.refresh();
+        return;
+      }
+      if (selectedNode1 && selectedNode1.originalColor) {
+        selectedNode1.color = selectedNode1.originalColor;
+      }
+      // Premier clic
+      if (!selectedNode1) {
+        if (!clickedNode.originalColor) clickedNode.originalColor = clickedNode.color;
+        clickedNode.color = "#1eff00"; // vert
+        selectedNode1 = clickedNode;
+        s.refresh();
+        showNotification(`1er mot : <strong>${clickedNode.label}</strong>`);
+        return;
+      }
+      // Deuxième clic
+      const node1 = selectedNode1;
+      const node2 = clickedNode;
+      selectedNode1 = null;
+      modeCheminActif = false;	
+	let delay = 0;	
+	delay += 1000;	
+		setTimeout(() => {
+		showNotification(`2ème mot : <strong>${clickedNode.label}</strong>`);
+		}, delay);
+	delay += 2000;  
+		setTimeout(() => {
+		showNotification("Patientez, le traitement peut être long, plusieurs minutes !");
+		}, delay); 
+		document.getElementById("btn-mode-chemin").classList.remove("active");
+     delay += 2000; 	  
+		setTimeout(() => {
+		const chemin = trouverChemin(storedGraphComplet, node1.label, node2.label);
+		if (!chemin) {
+			showNotification(`❌ Aucun chemin entre <strong>${node1.label}</strong> et <strong>${node2.label}</strong>.`);
+			s.refresh();
+			return;
+		}
+		// Surlignage des nœuds
+		chemin.forEach(id => {
+        const n = s.graph.nodes(id);
+        if (n) {
+          if (!n.originalColor) n.originalColor = n.color;
+          n.color = "#ba1bcc";
+        }
+		});
+		// Surlignage des arêtes
+		for (let i = 0; i < chemin.length - 1; i++) {
+        const source = chemin[i];
+        const target = chemin[i + 1];
+        s.graph.edges().forEach(edge => {
+          const match = (edge.source === source && edge.target === target)
+                     || (edge.source === target && edge.target === source);
+          if (match) {
+            if (!edge.originalColor) edge.originalColor = edge.color;
+            edge.color = "#ba1bcc";
+          }
+        });
+		}
+		s.refresh();
+		const distance = chemin.length - 1;
+		const labels = chemin.map(id => {
+        const n = storedGraphComplet.nodes.find(n => n.id === id);
+        return n ? n.label : id;
+      });
+
+      showNotif(`✅ <strong>Chemin, dans le graphe complet, entre ${node1.label} et ${node2.label}</strong> (${distance} étape${distance > 1 ? 's' : ''}) :<br>${labels.join(" → ")}`);
+      surlignageActif = "chemin";
+	  }, delay);
+    
+	 return; // ✅ ne pas continuer vers affichage classique
+    }
+
+//////////////////////////// ✅ MODE NORMAL
+    vedette = clickedNode;
+    highlightNode(vedette.id);
+    document.getElementById("show-neighbors-btn").disabled = false;
+    document.getElementById("show-cliques-btn").disabled = false;
+    document.getElementById("show-syno2-btn").disabled = false;
+    document.getElementById("show-adjacency-btn").disabled = false;
+
+	// ✅ récupérer un label même si node.label est vide
+	const affichageLabel = clickedNode.originalLabel || clickedNode.label || clickedNode.id;
+  
+	const infoText = document.getElementById('info-text');
+    infoText.innerHTML = `<strong style="font-size: 18px; color: red;">${affichageLabel}</strong>`;
+
+    const infoHTML = `
+	<p><strong style="font-size: 12px; " ><strong style="font-size: 22px; font-weight: bold; color:red ">${affichageLabel}</strong></p>
+	<p><strong style="font-size: 12px; " >Informations dans le dictionnaire complet :</strong></p>		  
+      <p>Variantes: ${clickedNode.variantes?.join(', ') || 'Aucune'}</p>
+      <p>Catgram: ${clickedNode.catgram?.join(', ') || 'Aucun'}</p>
+      <p>Nombre de synonymes: ${clickedNode["nombre de synonymes"] || '0'}</p>
+      <p>Synonymes: ${clickedNode.synonymes?.join(', ') || 'Aucun'}</p>
+      <p>Antonymes: ${clickedNode.antonymes?.join(', ') || 'Aucun'}</p>
+      <p>Cliques:<br> ${clickedNode.cliques?.map(clique => clique.join(', ')).join('<br>') || 'Aucune'}</p>
+    `;
+    showNotif(infoHTML);
+  });
+}
+ /////// FIN de la fonction pour gerer les evenements au CLIC GAUCHE des nœuds  
+   
+  // ✅ CLIC  gauche HORS D’UN NŒUD : RESET
+  s.bind('clickStage', function () {
+    if (surlignageActif === "chemin" && grapheAvantChemin) {
+      displayGraph(grapheAvantChemin);
+      grapheAvantChemin = null;
+    } else {
+      s.graph.nodes().forEach(n => {
+        if (n.originalColor) n.color = n.originalColor;
+      });
+      s.graph.edges().forEach(e => {
+        if (e.originalColor) e.color = e.originalColor;
+      });
+      s.refresh();
+    }
+    modeCheminActif = false;
+    selectedNode1 = null;
+    vedette = null;
+    surlignageActif = null;
+  });
+ // FIN CLIC gauche HORS D’UN NŒUD : RESET
+ 
+  
+ ///gestion du CLIC DROIT SUR UN NOEUD
+ function RightClickNodeEvents(s) {
+  s.bind('rightClickNode', function (e) {
+    const node = e.data.node;
+    const nodeId = node.id;
+    // ✅ Réinitialiser toutes les couleurs
+    s.graph.nodes().forEach(n => {
+      n.color = n.originalColor || '#ccc';
+    });
+    s.graph.edges().forEach(edge => {
+      edge.color = edge.originalColor || '#999';
+    });
+    // ✅ Mettre le nœud cliqué en rouge
+    if (!node.originalColor) node.originalColor = node.color;
+    node.color = '#FF0000';
+    const neighborLabels = new Set(); // 🧠 pour éviter les doublons
+    // ✅ Colorer les voisins et les arêtes
+    s.graph.edges().forEach(edge => {
+      if (edge.source === nodeId || edge.target === nodeId) {
+        if (!edge.originalColor) edge.originalColor = edge.color;
+        edge.color = '#FF0000';
+        const neighborId = edge.source === nodeId ? edge.target : edge.source;
+        const neighbor = s.graph.nodes(neighborId);
+        if (neighbor) {
+          if (!neighbor.originalColor) neighbor.originalColor = neighbor.color;
+          neighbor.color = '#FF0000';
+          neighborLabels.add(neighbor.label); // ✅ enregistrer le label du voisin
+        }
+      }
+    });
+    s.refresh();
+    const degree = neighborLabels.size;
+    const neighborList = Array.from(neighborLabels).sort().join(", ");
+    // ✅ Message enrichi avec la liste des voisins
+    showNotif(`<strong>${node.label}</strong> a ${degree} lien(s) dans le graphe affiché.<br><br><em>Liens vers : </em> ${neighborList}`);
+  });
+
+  // CLIC DROIT HORS D’UN NŒUD → réinitialisation
+		s.bind('clickStage', function () {
+		s.graph.nodes().forEach(n => {
+		if (n.originalColor) n.color = n.originalColor;
+		});
+		s.graph.edges().forEach(e => {
+		if (e.originalColor) e.color = e.originalColor;
+		});
+		s.refresh();
+		});
+	// fin CLIC DROIT HORS D’UN NŒUD → réinitialisation
+}
+///FIN gestion du CLIC DROIT SUR UN NOEUD
+
+  
+ /////// Fonction pour gerer les evenements SURVOL DES NŒUDS
+  function SurvolNoeud(s) {
+    s.bind('overNode', function(e) {
+    var node = e.data.node;
+		
+    // ✅ Affichage temporaire dans une info-bulle (tooltip)
+      var tooltip = document.getElementById('node-tooltip');
+	
+ const affichageLabel = node.originalLabel || node.label || node.id;
+    // ✅ Affichage conditionnel selon le type de graphe
+    if (typeDeGraphe === "reduit") {
+      tooltip.innerHTML = `<strong>${affichageLabel }</strong><br>
+        <p>Contenu du cluster :</p>
+        <p>${node.membres?.join(', ') || 'Aucun'}</p>`;
+    } else {
+      tooltip.innerHTML = `<strong>${affichageLabel}</strong><br>
+        <p>Nombre de synonymes: ${node["nombre de synonymes"] || '0'}</p>
+        <p>Synonymes: ${node.synonymes?.join(', ') || 'Aucun'}</p>`;
+    }
+    tooltip.style.display = "block";
+    tooltip.style.left = `${e.data.captor.clientX + 10}px`;
+    tooltip.style.top = `${e.data.captor.clientY + 10}px`;
+  });
+  s.bind('outNode', function() {
+    const tooltip = document.getElementById('node-tooltip');
+    tooltip.style.display = "none";
+  });
+}
+ /////// FIN de la fonction pour gerer les evenements SURVOL DES NŒUDS
+  
+// Charger le graphe lorsque la page est prête
+ window.onload = loadGraph;
+
+// fonction pour permettre le deplacement du popup avec la souris
+function makeDraggable(el) {
+    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+    el.onmousedown = dragMouseDown;
+    function dragMouseDown(e) {
+        e = e || window.event;
+        e.preventDefault();
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        document.onmouseup = closeDragElement;
+        document.onmousemove = elementDrag;
+    }
+    function elementDrag(e) {
+        e = e || window.event;
+        e.preventDefault();
+        pos1 = pos3 - e.clientX;
+        pos2 = pos4 - e.clientY;
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        el.style.top = (el.offsetTop - pos2) + "px";
+        el.style.left = (el.offsetLeft - pos1) + "px";
+    }
+    function closeDragElement() {
+        document.onmouseup = null;
+        document.onmousemove = null;
+    }
+}
+
+
+function demanderConfirmation(message, callback) {
+  const box = document.getElementById("confirmation-box");
+  const messageDiv = document.getElementById("confirmation-message");
+  const btnYes = document.getElementById("confirm-yes");
+  const btnNo = document.getElementById("confirm-no");
+  // Injecter le message
+  messageDiv.innerHTML = message;
+  box.style.display = "block";
+  // Nettoyer les anciens écouteurs si relancé
+  const cloneYes = btnYes.cloneNode(true);
+  const cloneNo = btnNo.cloneNode(true);
+  btnYes.parentNode.replaceChild(cloneYes, btnYes);
+  btnNo.parentNode.replaceChild(cloneNo, btnNo);
+  cloneYes.addEventListener("click", () => {
+    box.style.display = "none";
+    callback(true);
+  });
+  cloneNo.addEventListener("click", () => {
+    box.style.display = "none";
+    callback(false);
+  });
+}
+
+ 
+</script>
+<!-- fin du script js----------------------------------------------------------------------------------------------------- -->
+  
+  <div id="graph-message" style="display:none; position:fixed; top:100px; left:260px; background:#b4fc95; padding:10px; border:1px solid #ccc; border-radius:5px; max-width:300px; cursor:move; z-index:1000;"></div>
+ 
+	
+		<!-- ✅ Boîte de confirmation personnalisée -->
+	<div id="confirmation-box" style="display:none; position: fixed; top: 30%; left: 50%; transform: translate(-50%, -50%);
+	background-color: #fff; border: 2px solid #444; padding: 20px; z-index: 9999; width: 200px; box-shadow: 0 0 10px rgba(0,0,0,0.4);">
+	<div id="confirmation-message" style="margin-bottom: 20px; font-weight: bold;"></div>
+	<button id="confirm-yes" style="margin-right: 20px;"> Oui</button>
+	<button id="confirm-no"> Non</button>
+	</div>
+
+  
+</body>
+</html>
