@@ -950,8 +950,8 @@ setTimeout(() => {
  async function loadGraph() {
       try {
 			<!-- LES DONNÉES xxxxx.JSON SONT DANS LE MEME DOSSIER QUE INDEX.HTML  -- ------->
-			<!-- datafinal.json  output2DES.json   outputDES_catgram.json         -- ------->
-			const response = await fetch('outputDES_catgram.json');
+			<!-- datafinal.json  output2DES.json   outputDES_catgram.json   largedata.json      -- ------->
+			const response = await fetch('largedata.json');
 			const data = await response.json();
 
 			// Vérifier que les données contiennent les propriétés nodes et edges
